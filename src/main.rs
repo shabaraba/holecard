@@ -10,7 +10,8 @@ use config::{get_config_dir, Config};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use domain::{CryptoService, Entry, TemplateEngine, TotpService, Vault};
 use infrastructure::{
-    CryptoServiceImpl, KeyringManager, SessionData, SessionManager, VaultStorage,
+    decrypt_for_import, encrypt_for_export, CryptoServiceImpl, KeyringManager, SessionData,
+    SessionManager, VaultStorage,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -88,7 +89,9 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Init => handle_init(&keyring, &config_dir),
         Commands::Add { name, field } => handle_add(name, field, &keyring, &config_dir),
-        Commands::Get { name, clip, totp } => handle_get(&name, clip.clone(), totp, &keyring, &config_dir),
+        Commands::Get { name, clip, totp } => {
+            handle_get(&name, clip.clone(), totp, &keyring, &config_dir)
+        }
         Commands::List => handle_list(&keyring, &config_dir),
         Commands::Edit { name } => handle_edit(&name, &keyring, &config_dir),
         Commands::Rm { name } => handle_rm(&name, &keyring, &config_dir),
@@ -124,8 +127,7 @@ fn handle_init(keyring: &KeyringManager, config_dir: &std::path::PathBuf) -> Res
         keyring.delete_secret_key()?;
 
         if vault_exists {
-            std::fs::remove_file(&config.vault_path)
-                .context("Failed to delete vault file")?;
+            std::fs::remove_file(&config.vault_path).context("Failed to delete vault file")?;
         }
 
         let session = SessionManager::new(config_dir, config.session_timeout_minutes);
@@ -157,8 +159,14 @@ fn handle_init(keyring: &KeyringManager, config_dir: &std::path::PathBuf) -> Res
     let mut vault = Vault::new();
     let storage = VaultStorage::new(crypto);
 
-    let totp_entry = Entry::new("totp".to_string(), HashMap::new(), Some("TOTP secrets storage".to_string()));
-    vault.add_entry(totp_entry).map_err(|e| anyhow::anyhow!("{}", e))?;
+    let totp_entry = Entry::new(
+        "totp".to_string(),
+        HashMap::new(),
+        Some("TOTP secrets storage".to_string()),
+    );
+    vault
+        .add_entry(totp_entry)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let (derived_key, salt) = storage
         .derive_key_from_vault(&config.vault_path, &master_password, &secret_key)
@@ -246,13 +254,11 @@ fn handle_get(
 
     if let Some(field_name) = clip {
         let value_to_copy = match field_name {
-            Some(field) => {
-                entry
-                    .custom_fields
-                    .get(&field)
-                    .context(format!("Field '{}' not found", field))?
-                    .clone()
-            }
+            Some(field) => entry
+                .custom_fields
+                .get(&field)
+                .context(format!("Field '{}' not found", field))?
+                .clone(),
             None => {
                 if let Some(password) = entry.custom_fields.get("password") {
                     password.clone()
@@ -486,11 +492,19 @@ fn handle_export(
     let export_data: Vec<&Entry> = entries.into_iter().collect();
     let json = serde_json::to_string_pretty(&export_data).context("Failed to serialize entries")?;
 
-    std::fs::write(file, &json).context("Failed to write export file")?;
+    println!("\nSet a password to encrypt the export file:");
+    let password = input::prompt_export_password()?;
 
-    println!("✓ Exported {} entries to {}", export_data.len(), file);
-    println!("\n⚠ WARNING: This file contains sensitive data in plaintext!");
-    println!("  Delete it securely after use.");
+    let encrypted = encrypt_for_export(json.as_bytes(), &password)
+        .map_err(|e| anyhow::anyhow!("Failed to encrypt export: {}", e))?;
+
+    std::fs::write(file, &encrypted).context("Failed to write export file")?;
+
+    println!(
+        "\n✓ Exported {} entries to {} (encrypted)",
+        export_data.len(),
+        file
+    );
 
     Ok(())
 }
@@ -503,7 +517,15 @@ fn handle_import(
 ) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
-    let json = std::fs::read_to_string(file).context("Failed to read import file")?;
+    let encrypted_data = std::fs::read(file).context("Failed to read import file")?;
+
+    println!("\nEnter the password used to encrypt this export:");
+    let password = input::prompt_import_password()?;
+
+    let decrypted = decrypt_for_import(&encrypted_data, &password)
+        .map_err(|_| anyhow::anyhow!("Failed to decrypt: wrong password or corrupted file"))?;
+
+    let json = String::from_utf8(decrypted).context("Failed to decode decrypted data as UTF-8")?;
     let entries: Vec<Entry> = serde_json::from_str(&json).context("Failed to parse import file")?;
 
     let mut imported = 0;
@@ -549,7 +571,9 @@ fn handle_totp(
     config_dir: &std::path::PathBuf,
 ) -> Result<()> {
     match subcommand {
-        TotpCommands::Add { entry, secret } => handle_totp_add(&entry, &secret, keyring, config_dir),
+        TotpCommands::Add { entry, secret } => {
+            handle_totp_add(&entry, &secret, keyring, config_dir)
+        }
         TotpCommands::Get { entry } => handle_totp_get(&entry, keyring, config_dir),
         TotpCommands::Rm { entry } => handle_totp_rm(&entry, keyring, config_dir),
     }
@@ -563,16 +587,20 @@ fn handle_totp_add(
 ) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
-    let totp_entry = ctx
-        .vault
-        .get_entry_mut("totp")
-        .map_err(|_| anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'"))?;
+    let totp_entry = ctx.vault.get_entry_mut("totp").map_err(|_| {
+        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+    })?;
 
     if totp_entry.custom_fields.contains_key(service_name) {
-        println!("⚠ TOTP secret for '{}' already exists. Overwriting...", service_name);
+        println!(
+            "⚠ TOTP secret for '{}' already exists. Overwriting...",
+            service_name
+        );
     }
 
-    totp_entry.custom_fields.insert(service_name.to_string(), secret.to_string());
+    totp_entry
+        .custom_fields
+        .insert(service_name.to_string(), secret.to_string());
     totp_entry.updated_at = chrono::Utc::now();
 
     ctx.save()?;
@@ -587,10 +615,9 @@ fn handle_totp_get(
     config_dir: &std::path::PathBuf,
 ) -> Result<()> {
     let ctx = VaultContext::load(keyring, config_dir)?;
-    let totp_entry = ctx
-        .vault
-        .get_entry("totp")
-        .map_err(|_| anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'"))?;
+    let totp_entry = ctx.vault.get_entry("totp").map_err(|_| {
+        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+    })?;
 
     if let Some(secret) = totp_entry.custom_fields.get(service_name) {
         if secret.is_empty() {
@@ -635,10 +662,9 @@ fn handle_totp_rm(
 ) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
-    let totp_entry = ctx
-        .vault
-        .get_entry_mut("totp")
-        .map_err(|_| anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'"))?;
+    let totp_entry = ctx.vault.get_entry_mut("totp").map_err(|_| {
+        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+    })?;
 
     if totp_entry.custom_fields.remove(service_name).is_some() {
         totp_entry.updated_at = chrono::Utc::now();

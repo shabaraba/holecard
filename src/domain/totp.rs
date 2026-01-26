@@ -17,12 +17,8 @@ impl TotpService {
         let current_time = Utc::now().timestamp() as u64;
         let counter = current_time / TOTP_PERIOD;
 
-        let totp = totp_lite::totp_custom::<totp_lite::Sha1>(
-            TOTP_PERIOD,
-            TOTP_DIGITS,
-            &decoded,
-            counter,
-        );
+        let totp =
+            totp_lite::totp_custom::<totp_lite::Sha1>(TOTP_PERIOD, TOTP_DIGITS, &decoded, counter);
 
         Ok(format!("{:0width$}", totp, width = TOTP_DIGITS as usize))
     }

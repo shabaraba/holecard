@@ -27,7 +27,12 @@ pub enum Commands {
         #[arg(help = "Entry name")]
         name: String,
 
-        #[arg(short, long, value_name = "FIELD", help = "Copy field to clipboard (optional field name, defaults to 'password' or first field)")]
+        #[arg(
+            short,
+            long,
+            value_name = "FIELD",
+            help = "Copy field to clipboard (optional field name, defaults to 'password' or first field)"
+        )]
         clip: Option<Option<String>>,
 
         #[arg(long, help = "Show TOTP code")]
