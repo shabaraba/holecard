@@ -17,9 +17,12 @@ thiserror = "1.0"
 copypasta = "0.10"
 dialoguer = "0.11"
 base32 = "0.4"
+base64 = "0.22"
 zeroize = { version = "1.7", features = ["derive"] }
 toml = "0.8"
 dirs = "5.0"
+totp-lite = "2.0"
+regex = "1.10"
 
 [profile.release]
 opt-level = 3

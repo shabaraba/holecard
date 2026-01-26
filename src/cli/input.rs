@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use dialoguer::{theme::ColorfulTheme, Input, Password};
+use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use std::collections::HashMap;
 
 pub fn prompt_master_password() -> Result<String> {
@@ -70,4 +70,12 @@ pub fn prompt_notes() -> Result<Option<String>> {
     } else {
         Ok(Some(notes))
     }
+}
+
+pub fn prompt_confirm_reinit() -> Result<bool> {
+    Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt("⚠ Vault already exists. Reinitialize? This will DELETE ALL existing data!")
+        .default(false)
+        .interact()
+        .context("Failed to read confirmation")
 }

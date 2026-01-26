@@ -60,4 +60,17 @@ impl KeyringManager {
             Err(anyhow::anyhow!("Secret key not found. Please run 'hc init' first."))
         }
     }
+
+    pub fn delete_secret_key(&self) -> Result<()> {
+        if let Ok(entry) = Entry::new(SERVICE_NAME, USERNAME) {
+            let _ = entry.delete_password();
+        }
+
+        if self.fallback_path.exists() {
+            fs::remove_file(&self.fallback_path)
+                .context("Failed to delete fallback secret key file")?;
+        }
+
+        Ok(())
+    }
 }

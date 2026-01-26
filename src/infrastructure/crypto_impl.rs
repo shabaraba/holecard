@@ -7,15 +7,33 @@ use argon2::{Algorithm, Argon2, Params, Version};
 use rand::RngCore;
 use zeroize::Zeroize;
 
-const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
-const MIN_ENCRYPTED_LEN: usize = SALT_LEN + NONCE_LEN + 16;
+const MIN_ENCRYPTED_LEN_WITH_KEY: usize = NONCE_LEN + 16;
 
 pub struct CryptoServiceImpl;
 
 impl CryptoServiceImpl {
     pub fn new() -> Self {
         Self
+    }
+}
+
+impl CryptoService for CryptoServiceImpl {
+    fn generate_secret_key(&self) -> String {
+        let mut bytes = [0u8; 20];
+        OsRng.fill_bytes(&mut bytes);
+
+        let encoded = base32::encode(base32::Alphabet::Crockford, &bytes);
+
+        format!(
+            "A3-{}-{}-{}-{}-{}-{}",
+            &encoded[0..6],
+            &encoded[6..12],
+            &encoded[12..17],
+            &encoded[17..22],
+            &encoded[22..27],
+            &encoded[27..32]
+        )
     }
 
     fn derive_key(&self, master_password: &str, secret_key: &str, salt: &[u8]) -> Result<[u8; 32], CryptoError> {
@@ -37,18 +55,12 @@ impl CryptoServiceImpl {
         combined.zeroize();
         Ok(output_key)
     }
-}
 
-impl CryptoService for CryptoServiceImpl {
-    fn encrypt(&self, data: &[u8], master_password: &str, secret_key: &str) -> Result<Vec<u8>, CryptoError> {
-        let mut salt = [0u8; SALT_LEN];
-        OsRng.fill_bytes(&mut salt);
-
+    fn encrypt_with_key(&self, data: &[u8], derived_key: &[u8; 32]) -> Result<Vec<u8>, CryptoError> {
         let mut nonce_bytes = [0u8; NONCE_LEN];
         OsRng.fill_bytes(&mut nonce_bytes);
 
-        let mut key = self.derive_key(master_password, secret_key, &salt)?;
-        let cipher = Aes256Gcm::new_from_slice(&key)
+        let cipher = Aes256Gcm::new_from_slice(derived_key)
             .map_err(|e| CryptoError::CipherInitFailed(e.to_string()))?;
 
         let nonce = Nonce::from_slice(&nonce_bytes);
@@ -56,27 +68,22 @@ impl CryptoService for CryptoServiceImpl {
             .encrypt(nonce, data)
             .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
 
-        key.zeroize();
-
-        let mut result = Vec::with_capacity(SALT_LEN + NONCE_LEN + ciphertext.len());
-        result.extend_from_slice(&salt);
+        let mut result = Vec::with_capacity(NONCE_LEN + ciphertext.len());
         result.extend_from_slice(&nonce_bytes);
         result.extend_from_slice(&ciphertext);
 
         Ok(result)
     }
 
-    fn decrypt(&self, encrypted_data: &[u8], master_password: &str, secret_key: &str) -> Result<Vec<u8>, CryptoError> {
-        if encrypted_data.len() < MIN_ENCRYPTED_LEN {
+    fn decrypt_with_key(&self, encrypted_data: &[u8], derived_key: &[u8; 32]) -> Result<Vec<u8>, CryptoError> {
+        if encrypted_data.len() < MIN_ENCRYPTED_LEN_WITH_KEY {
             return Err(CryptoError::InvalidData("too short".to_string()));
         }
 
-        let salt = &encrypted_data[..SALT_LEN];
-        let nonce_bytes = &encrypted_data[SALT_LEN..SALT_LEN + NONCE_LEN];
-        let ciphertext = &encrypted_data[SALT_LEN + NONCE_LEN..];
+        let nonce_bytes = &encrypted_data[..NONCE_LEN];
+        let ciphertext = &encrypted_data[NONCE_LEN..];
 
-        let mut key = self.derive_key(master_password, secret_key, salt)?;
-        let cipher = Aes256Gcm::new_from_slice(&key)
+        let cipher = Aes256Gcm::new_from_slice(derived_key)
             .map_err(|e| CryptoError::CipherInitFailed(e.to_string()))?;
 
         let nonce = Nonce::from_slice(nonce_bytes);
@@ -84,25 +91,7 @@ impl CryptoService for CryptoServiceImpl {
             .decrypt(nonce, ciphertext)
             .map_err(|_| CryptoError::DecryptionFailed)?;
 
-        key.zeroize();
         Ok(plaintext)
-    }
-
-    fn generate_secret_key(&self) -> String {
-        let mut bytes = [0u8; 20];
-        OsRng.fill_bytes(&mut bytes);
-
-        let encoded = base32::encode(base32::Alphabet::Crockford, &bytes);
-
-        format!(
-            "A3-{}-{}-{}-{}-{}-{}",
-            &encoded[0..6],
-            &encoded[6..12],
-            &encoded[12..17],
-            &encoded[17..22],
-            &encoded[22..27],
-            &encoded[27..32]
-        )
     }
 }
 

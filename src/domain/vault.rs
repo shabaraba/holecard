@@ -47,9 +47,18 @@ impl Vault {
         entries
     }
 
-    #[allow(dead_code)]
-    pub fn entry_exists(&self, name: &str) -> bool {
-        self.entries.contains_key(name)
+    pub fn import_entry(&mut self, entry: Entry, overwrite: bool) -> Result<bool, VaultError> {
+        if self.entries.contains_key(&entry.name) {
+            if overwrite {
+                self.entries.insert(entry.name.clone(), entry);
+                Ok(true)
+            } else {
+                Err(VaultError::EntryAlreadyExists(entry.name.clone()))
+            }
+        } else {
+            self.entries.insert(entry.name.clone(), entry);
+            Ok(false)
+        }
     }
 }
 
