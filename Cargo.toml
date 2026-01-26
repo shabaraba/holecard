@@ -1,0 +1,28 @@
+[package]
+name = "pm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+argon2 = "0.5"
+aes-gcm = "0.10"
+rand = "0.8"
+keyring = "2.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
+copypasta = "0.10"
+dialoguer = "0.11"
+base32 = "0.4"
+zeroize = { version = "1.7", features = ["derive"] }
+toml = "0.8"
+dirs = "5.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

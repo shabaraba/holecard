@@ -1,0 +1,151 @@
+---
+vibing.nvim: true
+session_id: 49b84458-46a5-4c1c-920f-35c76eff179d
+created_at: 2026-01-26T11:51:04
+mode: plan
+model: opus
+permission_mode: acceptEdits
+permissions_allow:
+  - Read
+  - Edit
+  - Write
+  - Glob
+  - Grep
+  - WebSearch
+  - WebFetch
+  - Bash
+  - mcp__chrome-devtools__*
+permissions_ask:
+  - Bash(rm:*)
+---
+
+# Vibing Chat
+
+---
+
+## User <!-- 2026-01-26 11:55:11 -->
+
+自作パスワードマネージャーの設計について、実装方針を整理します。
+
+## まず決めるべきアーキテクチャ選択
+
+**1. ストレージモデル**
+
+| 方式 | メリット | デメリット |
+|------|----------|------------|
+| ローカルのみ | シンプル、攻撃面が小さい | 同期なし、バックアップが課題 |
+| 自前サーバー同期 | 複数デバイス対応 | サーバー運用コスト、攻撃面増加 |
+| クラウドストレージ同期 | 運用不要、既存インフラ活用 | ベンダー依存 |
+
+**現実的な推奨**: 暗号化済みファイルをiCloud/Google Drive/Dropbox等で同期。サーバー実装不要で同期も実現できます。
+
+**2. クライアント形態**
+
+- CLI（最速で作れる、自分専用なら十分）
+- ブラウザ拡張（自動入力したいなら必須）
+- デスクトップアプリ（Tauri/Electron）
+- モバイルアプリ（iOS/Android）
+
+## 暗号化設計の基本構成
+
+```
+Master Password
+      ↓
+   Argon2id (推奨) or scrypt
+      ↓
+ Master Key (256-bit)
+      ↓
+   AES-256-GCM
+      ↓
+ Encrypted Vault (JSON)
+```
+
+**Argon2idを推奨する理由**: PBKDF2やbcryptより耐GPU/ASIC性能が高い。現代のパスワードハッシュ標準です。
+
+## 最小実装の例（Rust）
+
+```rust
+// 依存: argon2, aes-gcm, rand, serde_json
+
+use argon2::{Argon2, password_hash::SaltString};
+use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead, Nonce};
+use rand::rngs::OsRng;
+
+struct Vault {
+    salt: [u8; 16],
+    nonce: [u8; 12],
+    ciphertext: Vec<u8>,
+}
+
+fn derive_key(password: &str, salt: &[u8]) -> [u8; 32] {
+    let mut key = [0u8; 32];
+    Argon2::default()
+        .hash_password_into(password.as_bytes(), salt, &mut key)
+        .unwrap();
+    key
+}
+
+fn encrypt(password: &str, data: &[u8]) -> Vault {
+    let salt: [u8; 16] = rand::random();
+    let nonce: [u8; 12] = rand::random();
+    let key = derive_key(password, &salt);
+    let cipher = Aes256Gcm::new_from_slice(&key).unwrap();
+    let ciphertext = cipher.encrypt(Nonce::from_slice(&nonce), data).unwrap();
+    Vault { salt, nonce, ciphertext }
+}
+```
+
+## 検討すべき追加機能（優先度順）
+
+**必須級**
+1. クリップボード自動クリア（30秒後等）
+2. メモリ上の機密データのゼロ化
+3. TOTP対応（2FA統合）
+
+**あると便利**
+4. パスワード生成器
+5. 検索・フィルタ
+6. ブラウザ拡張連携（Native Messaging）
+
+**高度**
+7. 1Password風の二重鍵（Master Password + Secret Key）
+8. 変更履歴
+9. 緊急アクセス機能
+
+## 実装上の注意点
+
+**やってはいけないこと**
+- 自前で暗号アルゴリズムを実装する（必ずライブラリを使う）
+- ECBモードを使う
+- 固定IVを使う
+- パスワードを平文でログに出す
+
+**やるべきこと**
+- `mlock`/`VirtualLock`で機密データをスワップアウト防止
+- 使用後のメモリを確実にゼロ化
+- 定数時間比較で文字列比較（タイミング攻撃対策）
+
+## ユースケース
+- 複数プロジェクトで.envやwranglerを使っているがそれらをこのプロジェクトのcliコマンドでインジェクションできると嬉しい、one passwordみたいに
+- Claudeに認証を含むbashコマンドを叩いてもらうときに、平文でAIに教えるのではなくてcliコマンドをそのまま乗せて裏で展開してもらうことで、AIに認証情報を知られること無く使えるようにしたい
+- Claudeにブラウザ操作してもらう際に、id/passwordでログインするときにそれらの情報を教えるのではなくて、cliコマンドを載せて裏で展開、もしくは拡張機能経由で選択してもらうことで、AIに認証情報を知られること無く使えるようにしたい
+- 複数のデバイスで認証情報を同期、管理したい
+
+## Assistant
+
+素晴らしい設計方針ですね。ユースケースを整理すると、重要なポイントが見えてきます。
+
+## ユースケース分析
+
+| ユースケース | 必要な機能 |
+|-------------|-----------|
+| `.env`/wrangler へのインジェクション | CLI + 環境変数展開 |
+| Claude へのマスキング | CLI経由の実行 + 展開 |
+| ブラウザ認証のマスキング | ブラウザ拡張 or CLI連携 |
+| 複数デバイス同期 | 暗号化ファイル + クラウドストレージ |
+
+## 確認したい点
+
+いくつか方針を決めるために質問させてください：
+⏺ AskUserQuestion()
+

@@ -1,0 +1,110 @@
+{
+  "id": "0d1e84643d3d496e299bf517e004240d58b7f870eb16a1997a5d34820e2457d6",
+  "timestamp": "2026-01-26T04:05:45.514149Z",
+  "message": "Before request",
+  "files": [
+    {
+      "path": "Cargo.toml",
+      "hash": "5aae70d1324bfcb72184a4f6b20f918cb2763bcde9523f37bd74d80d788331a1",
+      "size": 545,
+      "mode": null
+    },
+    {
+      "path": "Cargo.lock",
+      "hash": "b151ea7589825737383b9180c9be770fe19ae638951c049f5caf4e27d63973a7",
+      "size": 70172,
+      "mode": null
+    },
+    {
+      "path": ".moteignore",
+      "hash": "ebf6a340fd0e8ad0d9567a1c99a109f95445b2751ec5f8204ea6d82766e6719d",
+      "size": 307,
+      "mode": null
+    },
+    {
+      "path": "src/config.rs",
+      "hash": "08b7fd5b52c0a821ce1dc0c451508ce495d8c34bfbf9716e6cff09f0629af6a4",
+      "size": 1578,
+      "mode": null
+    },
+    {
+      "path": "src/cli/commands.rs",
+      "hash": "aece305d2bdc73f8333be35339ba09a6caa5ed5222aebbfd0373c177285175c8",
+      "size": 1344,
+      "mode": null
+    },
+    {
+      "path": "src/cli/mod.rs",
+      "hash": "9505ab55d6e80f05fb88c3db67fa74390655e1a15efed70c252d4bb2c2917dbc",
+      "size": 69,
+      "mode": null
+    },
+    {
+      "path": "src/cli/input.rs",
+      "hash": "ad4ee2a59941b638e27c16a2125576e73790233f914a8ab21297680c4876277f",
+      "size": 2122,
+      "mode": null
+    },
+    {
+      "path": "src/main.rs",
+      "hash": "6b9b5432be2b22bc868f42a466ddfbd6df5f4880ad7ffcdafa44aff177da0ca8",
+      "size": 7235,
+      "mode": null
+    },
+    {
+      "path": "src/infrastructure/crypto_impl.rs",
+      "hash": "3c4681be3d25770285b978a89ad92b3e17856eb98635a47e61e3e3841bb183f7",
+      "size": 3645,
+      "mode": null
+    },
+    {
+      "path": "src/infrastructure/mod.rs",
+      "hash": "c694b090a35d7f9e05543b2b643d3d2eace891e1eaca45b977e3befaaf76f7d0",
+      "size": 160,
+      "mode": null
+    },
+    {
+      "path": "src/infrastructure/storage.rs",
+      "hash": "2d3cbf18c32dbdbd87e8fd1d5b0cc82b9e61b075dd4fb64a4a625d553fe6fe7f",
+      "size": 2335,
+      "mode": null
+    },
+    {
+      "path": "src/infrastructure/keyring.rs",
+      "hash": "db012ff1e76c59232d34f9c86bc2a11676e114d682e489e586bababb5464b720",
+      "size": 1948,
+      "mode": null
+    },
+    {
+      "path": "src/domain/error.rs",
+      "hash": "156f770c4126bc15c084671210d39bb603d6b98f754d999d2fd6b039751c4b66",
+      "size": 654,
+      "mode": null
+    },
+    {
+      "path": "src/domain/mod.rs",
+      "hash": "291941aeaf7bb87b7a0faeb9954d6719bdd77ac98fb46628da48592ace393f71",
+      "size": 217,
+      "mode": null
+    },
+    {
+      "path": "src/domain/entry.rs",
+      "hash": "b2377678a4a214aa4e3dc9a28f7f890f33bc6d1f66c9f66ec76cc32cfb3cecf4",
+      "size": 939,
+      "mode": null
+    },
+    {
+      "path": "src/domain/vault.rs",
+      "hash": "7c134fa735ebb282c3a295cf895dab3ca8a70ba57671011172704d3e695c540a",
+      "size": 1642,
+      "mode": null
+    },
+    {
+      "path": "src/domain/crypto.rs",
+      "hash": "953249e985d68aee1ec838c195b401306b9434f3a90f9642c3461568bf21cfa6",
+      "size": 333,
+      "mode": null
+    }
+  ],
+  "trigger": null
+}
