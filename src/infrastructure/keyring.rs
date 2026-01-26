@@ -3,7 +3,7 @@ use keyring::Entry;
 use std::fs;
 use std::path::PathBuf;
 
-const SERVICE_NAME: &str = "pm";
+const SERVICE_NAME: &str = "hc";
 const USERNAME: &str = "secret_key";
 
 pub struct KeyringManager {
@@ -57,7 +57,7 @@ impl KeyringManager {
                 .map(|s| s.trim().to_string())
                 .context("Failed to read secret key from fallback file")
         } else {
-            Err(anyhow::anyhow!("Secret key not found. Please run 'pm init' first."))
+            Err(anyhow::anyhow!("Secret key not found. Please run 'hc init' first."))
         }
     }
 }

@@ -5,7 +5,7 @@ mod infrastructure;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use cli::{input, Cli, Commands};
+use cli::{input, Cli, Commands, ConfigCommands};
 use config::{get_config_dir, Config};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use domain::{CryptoService, Entry, Vault};
@@ -59,6 +59,7 @@ fn main() -> Result<()> {
         Commands::List => handle_list(&keyring, &config_dir),
         Commands::Edit { name } => handle_edit(&name, &keyring, &config_dir),
         Commands::Rm { name } => handle_rm(&name, &keyring, &config_dir),
+        Commands::Config { subcommand } => handle_config(subcommand, &config_dir),
     }
 }
 
@@ -69,6 +70,17 @@ fn handle_init(keyring: &KeyringManager, config_dir: &std::path::PathBuf) -> Res
         return Ok(());
     }
 
+    println!("\n========================================");
+    println!("     Vault Initialization");
+    println!("========================================");
+    println!("\nPlease set your Master Password.");
+    println!("Requirements:");
+    println!("  • At least 12 characters");
+    println!("  • This will be needed to access your vault");
+    println!("========================================\n");
+
+    let master_password = input::prompt_master_password_confirm()?;
+
     let crypto = CryptoServiceImpl::new();
     let secret_key = crypto.generate_secret_key();
 
@@ -77,6 +89,12 @@ fn handle_init(keyring: &KeyringManager, config_dir: &std::path::PathBuf) -> Res
     let secret_key_path = config_dir.join("secret_key_backup.txt");
     std::fs::write(&secret_key_path, &secret_key)
         .context("Failed to write secret key backup")?;
+
+    let config = Config::load(config_dir)?;
+    let vault = Vault::new();
+    let storage = VaultStorage::new(crypto);
+
+    storage.save(&vault, &config.vault_path, &master_password, &secret_key)?;
 
     println!("\n========================================");
     println!("     Vault Initialization Complete");
@@ -89,15 +107,6 @@ fn handle_init(keyring: &KeyringManager, config_dir: &std::path::PathBuf) -> Res
     println!("  3. You will need the Secret Key + Master Password to access your vault");
     println!("========================================\n");
 
-    let master_password = input::prompt_master_password_confirm()?;
-
-    let config = Config::load(config_dir)?;
-    let vault = Vault::new();
-    let storage = VaultStorage::new(crypto);
-
-    storage.save(&vault, &config.vault_path, &master_password, &secret_key)?;
-
-    println!("\n✓ Vault initialized successfully!");
     Ok(())
 }
 
@@ -223,5 +232,37 @@ fn handle_rm(name: &str, keyring: &KeyringManager, config_dir: &std::path::PathB
     ctx.save()?;
 
     println!("✓ Entry '{}' removed successfully!", name);
+    Ok(())
+}
+
+fn handle_config(subcommand: Option<ConfigCommands>, config_dir: &std::path::PathBuf) -> Result<()> {
+    let mut config = Config::load(config_dir)?;
+
+    match subcommand {
+        None => {
+            println!("\nCurrent Configuration:");
+            println!("  Vault Path: {}", config.vault_path.display());
+            println!("  Session Timeout: {} minutes", config.session_timeout_minutes);
+        }
+        Some(ConfigCommands::VaultPath { path }) => {
+            let new_path = PathBuf::from(path);
+            let expanded_path = if new_path.starts_with("~") {
+                let home = dirs::home_dir().context("Failed to get home directory")?;
+                home.join(new_path.strip_prefix("~").unwrap())
+            } else {
+                new_path
+            };
+
+            config.vault_path = expanded_path.clone();
+            config.save(config_dir)?;
+            println!("✓ Vault path updated to: {}", expanded_path.display());
+        }
+        Some(ConfigCommands::SessionTimeout { minutes }) => {
+            config.session_timeout_minutes = minutes;
+            config.save(config_dir)?;
+            println!("✓ Session timeout updated to: {} minutes", minutes);
+        }
+    }
+
     Ok(())
 }

@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "pm")]
+#[command(name = "hc")]
 #[command(about = "Secure password manager CLI", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
@@ -44,6 +44,27 @@ pub enum Commands {
     Rm {
         #[arg(help = "Entry name")]
         name: String,
+    },
+
+    #[command(about = "Manage configuration")]
+    Config {
+        #[command(subcommand)]
+        subcommand: Option<ConfigCommands>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ConfigCommands {
+    #[command(about = "Set vault file path")]
+    VaultPath {
+        #[arg(help = "New vault file path")]
+        path: String,
+    },
+
+    #[command(about = "Set session timeout (minutes)")]
+    SessionTimeout {
+        #[arg(help = "Timeout in minutes")]
+        minutes: u64,
     },
 }
 

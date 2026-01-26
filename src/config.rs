@@ -44,7 +44,7 @@ impl Config {
 
 pub fn get_config_dir() -> Result<PathBuf> {
     let home = dirs::home_dir().context("Failed to get home directory")?;
-    let config_dir = home.join(".pm");
+    let config_dir = home.join(".holecard");
 
     if !config_dir.exists() {
         fs::create_dir_all(&config_dir).context("Failed to create config directory")?;

@@ -89,7 +89,7 @@ impl CryptoService for CryptoServiceImpl {
     }
 
     fn generate_secret_key(&self) -> String {
-        let mut bytes = [0u8; 16];
+        let mut bytes = [0u8; 20];
         OsRng.fill_bytes(&mut bytes);
 
         let encoded = base32::encode(base32::Alphabet::Crockford, &bytes);

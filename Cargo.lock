@@ -930,6 +930,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 
 [[package]]
+name = "hc"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "argon2",
+ "base32",
+ "chrono",
+ "clap",
+ "copypasta",
+ "dialoguer",
+ "dirs",
+ "keyring",
+ "rand",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "toml",
+ "zeroize",
+]
+
+[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1433,28 +1455,6 @@ name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
-
-[[package]]
-name = "pm"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "anyhow",
- "argon2",
- "base32",
- "chrono",
- "clap",
- "copypasta",
- "dialoguer",
- "dirs",
- "keyring",
- "rand",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "toml",
- "zeroize",
-]
 
 [[package]]
 name = "polling"
