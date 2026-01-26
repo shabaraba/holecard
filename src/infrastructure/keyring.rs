@@ -57,7 +57,9 @@ impl KeyringManager {
                 .map(|s| s.trim().to_string())
                 .context("Failed to read secret key from fallback file")
         } else {
-            Err(anyhow::anyhow!("Secret key not found. Please run 'hc init' first."))
+            Err(anyhow::anyhow!(
+                "Secret key not found. Please run 'hc init' first."
+            ))
         }
     }
 

@@ -19,16 +19,14 @@ impl Config {
             return Ok(default_config);
         }
 
-        let content = fs::read_to_string(&config_path)
-            .context("Failed to read config file")?;
+        let content = fs::read_to_string(&config_path).context("Failed to read config file")?;
 
         toml::from_str(&content).context("Failed to parse config file")
     }
 
     pub fn save(&self, config_dir: &PathBuf) -> Result<()> {
         let config_path = config_dir.join("config.toml");
-        let content = toml::to_string_pretty(self)
-            .context("Failed to serialize config")?;
+        let content = toml::to_string_pretty(self).context("Failed to serialize config")?;
 
         fs::write(&config_path, content).context("Failed to write config file")?;
         Ok(())

@@ -17,7 +17,9 @@ pub fn prompt_master_password_confirm() -> Result<String> {
         .context("Failed to read master password")?;
 
     if password.len() < 12 {
-        return Err(anyhow::anyhow!("Master password must be at least 12 characters"));
+        return Err(anyhow::anyhow!(
+            "Master password must be at least 12 characters"
+        ));
     }
 
     Ok(password)
@@ -78,4 +80,25 @@ pub fn prompt_confirm_reinit() -> Result<bool> {
         .default(false)
         .interact()
         .context("Failed to read confirmation")
+}
+
+pub fn prompt_export_password() -> Result<String> {
+    let password = Password::with_theme(&ColorfulTheme::default())
+        .with_prompt("Export Password")
+        .with_confirmation("Confirm Export Password", "Passwords do not match")
+        .interact()
+        .context("Failed to read export password")?;
+
+    if password.is_empty() {
+        return Err(anyhow::anyhow!("Export password cannot be empty"));
+    }
+
+    Ok(password)
+}
+
+pub fn prompt_import_password() -> Result<String> {
+    Password::with_theme(&ColorfulTheme::default())
+        .with_prompt("Import Password")
+        .interact()
+        .context("Failed to read import password")
 }

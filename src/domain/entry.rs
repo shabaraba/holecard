@@ -12,7 +12,11 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn new(name: String, custom_fields: HashMap<String, String>, notes: Option<String>) -> Self {
+    pub fn new(
+        name: String,
+        custom_fields: HashMap<String, String>,
+        notes: Option<String>,
+    ) -> Self {
         let now = Utc::now();
         Self {
             name,

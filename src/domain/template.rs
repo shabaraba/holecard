@@ -32,17 +32,27 @@ impl TemplateEngine {
                         continue;
                     }
                 } else {
-                    anyhow::bail!("Invalid template variable: {}. Only 'entry' is supported", entry_part);
+                    anyhow::bail!(
+                        "Invalid template variable: {}. Only 'entry' is supported",
+                        entry_part
+                    );
                 }
             } else {
-                anyhow::bail!("Invalid template syntax: {}. Use {{{{entry.field}}}} or {{{{entry}}}}", var_name);
+                anyhow::bail!(
+                    "Invalid template syntax: {}. Use {{{{entry.field}}}} or {{{{entry}}}}",
+                    var_name
+                );
             };
 
             result = result.replace(full_match, &replacement);
         }
 
         if !missing_fields.is_empty() {
-            anyhow::bail!("Missing fields in entry '{}': {}", entry.name, missing_fields.join(", "));
+            anyhow::bail!(
+                "Missing fields in entry '{}': {}",
+                entry.name,
+                missing_fields.join(", ")
+            );
         }
 
         Ok(result)
@@ -82,10 +92,9 @@ mod tests {
     #[test]
     fn test_render_multiple_fields() {
         let entry = create_test_entry();
-        let result = TemplateEngine::render(
-            "Connect to {{entry.host}} as {{entry.username}}",
-            &entry
-        ).unwrap();
+        let result =
+            TemplateEngine::render("Connect to {{entry.host}} as {{entry.username}}", &entry)
+                .unwrap();
         assert_eq!(result, "Connect to db.example.com as john");
     }
 

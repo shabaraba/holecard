@@ -13,7 +13,11 @@ impl<C: CryptoService> VaultStorage<C> {
         Self { crypto }
     }
 
-    pub fn load_with_cached_key(&self, path: &Path, derived_key: &[u8; 32]) -> Result<Vault, CryptoError> {
+    pub fn load_with_cached_key(
+        &self,
+        path: &Path,
+        derived_key: &[u8; 32],
+    ) -> Result<Vault, CryptoError> {
         if !path.exists() {
             return Ok(Vault::new());
         }
@@ -34,10 +38,17 @@ impl<C: CryptoService> VaultStorage<C> {
         Ok(vault)
     }
 
-    pub fn save_with_cached_key(&self, vault: &Vault, path: &Path, derived_key: &[u8; 32], salt: &[u8; 16]) -> Result<(), CryptoError> {
+    pub fn save_with_cached_key(
+        &self,
+        vault: &Vault,
+        path: &Path,
+        derived_key: &[u8; 32],
+        salt: &[u8; 16],
+    ) -> Result<(), CryptoError> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| CryptoError::InvalidData(format!("Failed to create vault directory: {}", e)))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                CryptoError::InvalidData(format!("Failed to create vault directory: {}", e))
+            })?;
         }
 
         let json_data = serde_json::to_vec(vault)
@@ -52,10 +63,16 @@ impl<C: CryptoService> VaultStorage<C> {
         self.write_vault_file(path, &encrypted_data)
     }
 
-    pub fn derive_key_from_vault(&self, path: &Path, master_password: &str, secret_key: &str) -> Result<([u8; 32], [u8; 16]), CryptoError> {
+    pub fn derive_key_from_vault(
+        &self,
+        path: &Path,
+        master_password: &str,
+        secret_key: &str,
+    ) -> Result<([u8; 32], [u8; 16]), CryptoError> {
         let salt = if path.exists() {
-            let encrypted_data = fs::read(path)
-                .map_err(|e| CryptoError::InvalidData(format!("Failed to read vault file: {}", e)))?;
+            let encrypted_data = fs::read(path).map_err(|e| {
+                CryptoError::InvalidData(format!("Failed to read vault file: {}", e))
+            })?;
             if encrypted_data.len() < SALT_LEN {
                 return Err(CryptoError::InvalidData("Vault file too short".to_string()));
             }
@@ -82,15 +99,19 @@ impl<C: CryptoService> VaultStorage<C> {
         {
             use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(&temp_path)
-                .map_err(|e| CryptoError::InvalidData(format!("Failed to get file metadata: {}", e)))?
+                .map_err(|e| {
+                    CryptoError::InvalidData(format!("Failed to get file metadata: {}", e))
+                })?
                 .permissions();
             perms.set_mode(0o600);
-            fs::set_permissions(&temp_path, perms)
-                .map_err(|e| CryptoError::InvalidData(format!("Failed to set file permissions: {}", e)))?;
+            fs::set_permissions(&temp_path, perms).map_err(|e| {
+                CryptoError::InvalidData(format!("Failed to set file permissions: {}", e))
+            })?;
         }
 
-        fs::rename(&temp_path, path)
-            .map_err(|e| CryptoError::InvalidData(format!("Failed to finalize vault file: {}", e)))?;
+        fs::rename(&temp_path, path).map_err(|e| {
+            CryptoError::InvalidData(format!("Failed to finalize vault file: {}", e))
+        })?;
 
         Ok(())
     }
