@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::Command;
 
 use crate::context::VaultContext;
@@ -10,7 +10,7 @@ pub fn handle_inject(
     entry_name: &str,
     template: &str,
     keyring: &KeyringManager,
-    config_dir: &PathBuf,
+    config_dir: &Path,
 ) -> Result<()> {
     let ctx = VaultContext::load(keyring, config_dir)?;
     let entry = ctx
@@ -28,7 +28,7 @@ pub fn handle_run(
     entry_name: &str,
     command: &[String],
     keyring: &KeyringManager,
-    config_dir: &PathBuf,
+    config_dir: &Path,
 ) -> Result<()> {
     if command.is_empty() {
         anyhow::bail!("No command specified");

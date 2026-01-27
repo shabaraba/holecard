@@ -1,16 +1,12 @@
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::cli::input;
 use crate::context::VaultContext;
 use crate::domain::Entry;
 use crate::infrastructure::{decrypt_for_import, encrypt_for_export, KeyringManager};
 
-pub fn handle_export(
-    file: &str,
-    keyring: &KeyringManager,
-    config_dir: &PathBuf,
-) -> Result<()> {
+pub fn handle_export(file: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     let ctx = VaultContext::load(keyring, config_dir)?;
     let entries = ctx.vault.list_entries();
 
@@ -38,7 +34,7 @@ pub fn handle_import(
     file: &str,
     overwrite: bool,
     keyring: &KeyringManager,
-    config_dir: &PathBuf,
+    config_dir: &Path,
 ) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 

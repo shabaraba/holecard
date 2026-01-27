@@ -3,7 +3,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const SERVICE_NAME: &str = "hc-session";
@@ -27,7 +27,7 @@ pub struct SessionManager {
 }
 
 impl SessionManager {
-    pub fn new(config_dir: &PathBuf, timeout_minutes: u64) -> Self {
+    pub fn new(config_dir: &Path, timeout_minutes: u64) -> Self {
         Self {
             session_file: config_dir.join("session.json"),
             timeout_minutes,

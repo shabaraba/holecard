@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
@@ -11,7 +11,7 @@ use crate::context::VaultContext;
 use crate::domain::{CryptoService, Entry, Vault};
 use crate::infrastructure::{CryptoServiceImpl, KeyringManager, SessionManager, VaultStorage};
 
-pub fn handle_init(keyring: &KeyringManager, config_dir: &PathBuf) -> Result<()> {
+pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     let secret_key_exists = keyring.load_secret_key().is_ok();
     let config = Config::load(config_dir)?;
     let vault_exists = config.vault_path.exists();
@@ -91,7 +91,7 @@ pub fn handle_add(
     name: Option<String>,
     fields: Vec<(String, String)>,
     keyring: &KeyringManager,
-    config_dir: &PathBuf,
+    config_dir: &Path,
 ) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
@@ -121,7 +121,7 @@ pub fn handle_get(
     clip: Option<Option<String>>,
     totp: bool,
     keyring: &KeyringManager,
-    config_dir: &PathBuf,
+    config_dir: &Path,
 ) -> Result<()> {
     let ctx = VaultContext::load(keyring, config_dir)?;
     let entry = ctx
@@ -187,7 +187,7 @@ pub fn handle_get(
     Ok(())
 }
 
-pub fn handle_list(keyring: &KeyringManager, config_dir: &PathBuf) -> Result<()> {
+pub fn handle_list(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     let ctx = VaultContext::load(keyring, config_dir)?;
     let entries = ctx.vault.list_entries();
 
@@ -215,11 +215,7 @@ pub fn handle_list(keyring: &KeyringManager, config_dir: &PathBuf) -> Result<()>
     Ok(())
 }
 
-pub fn handle_edit(
-    name: &str,
-    keyring: &KeyringManager,
-    config_dir: &PathBuf,
-) -> Result<()> {
+pub fn handle_edit(name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
     let entry = ctx
@@ -240,7 +236,7 @@ pub fn handle_edit(
     Ok(())
 }
 
-pub fn handle_rm(name: &str, keyring: &KeyringManager, config_dir: &PathBuf) -> Result<()> {
+pub fn handle_rm(name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
     ctx.vault

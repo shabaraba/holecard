@@ -49,7 +49,7 @@ pub fn prompt_custom_fields() -> Result<HashMap<String, String>> {
         }
 
         let value: String = Password::with_theme(&ColorfulTheme::default())
-            .with_prompt(&format!("{} value", key))
+            .with_prompt(format!("{} value", key))
             .allow_empty_password(true)
             .interact()
             .context("Failed to read field value")?;

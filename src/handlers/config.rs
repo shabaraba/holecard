@@ -1,13 +1,10 @@
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::cli::ConfigCommands;
 use crate::config::Config;
 
-pub fn handle_config(
-    subcommand: Option<ConfigCommands>,
-    config_dir: &PathBuf,
-) -> Result<()> {
+pub fn handle_config(subcommand: Option<ConfigCommands>, config_dir: &Path) -> Result<()> {
     let mut config = Config::load(config_dir)?;
 
     match subcommand {
