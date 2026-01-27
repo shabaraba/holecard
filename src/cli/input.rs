@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
+use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password, Select};
 use std::collections::HashMap;
+
+use crate::domain::Entry;
 
 pub fn prompt_master_password() -> Result<String> {
     Password::with_theme(&ColorfulTheme::default())
@@ -101,4 +103,78 @@ pub fn prompt_import_password() -> Result<String> {
         .with_prompt("Import Password")
         .interact()
         .context("Failed to read import password")
+}
+
+pub enum EditAction {
+    EditField(String),
+    AddField,
+    DeleteField(String),
+    EditNotes,
+    Done,
+}
+
+pub fn prompt_edit_menu(entry: &Entry) -> Result<EditAction> {
+    let mut options = vec!["Add new field", "Edit notes", "Done"];
+    let mut field_keys: Vec<String> = entry.custom_fields.keys().cloned().collect();
+    field_keys.sort();
+
+    if !field_keys.is_empty() {
+        println!("\nCurrent fields: {}", field_keys.join(", "));
+        options.insert(0, "Edit existing field");
+        options.insert(1, "Delete field");
+    }
+
+    let selection = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("Select action")
+        .items(&options)
+        .default(0)
+        .interact()
+        .context("Failed to read menu selection")?;
+
+    let offset = if field_keys.is_empty() { 0 } else { 2 };
+
+    match selection {
+        0 if !field_keys.is_empty() => {
+            let field_selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select field to edit")
+                .items(&field_keys)
+                .interact()
+                .context("Failed to read field selection")?;
+            Ok(EditAction::EditField(field_keys[field_selection].clone()))
+        }
+        1 if !field_keys.is_empty() => {
+            let field_selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select field to delete")
+                .items(&field_keys)
+                .interact()
+                .context("Failed to read field selection")?;
+            Ok(EditAction::DeleteField(field_keys[field_selection].clone()))
+        }
+        n if n == offset => Ok(EditAction::AddField),
+        n if n == offset + 1 => Ok(EditAction::EditNotes),
+        _ => Ok(EditAction::Done),
+    }
+}
+
+pub fn prompt_field_value(key: &str) -> Result<String> {
+    Password::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!("New value for '{}'", key))
+        .allow_empty_password(true)
+        .interact()
+        .context("Failed to read field value")
+}
+
+pub fn prompt_new_field() -> Result<(String, String)> {
+    let key: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Field name")
+        .interact_text()
+        .context("Failed to read field name")?;
+
+    let value: String = Password::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!("{} value", key))
+        .allow_empty_password(true)
+        .interact()
+        .context("Failed to read field value")?;
+
+    Ok((key, value))
 }

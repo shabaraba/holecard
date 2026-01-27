@@ -38,9 +38,6 @@ pub enum ProviderError {
     #[error("Provider configuration error: {0}")]
     ConfigError(String),
 
-    #[error("API request failed: {0}")]
-    ApiError(String),
-
     #[error("Field '{0}' not found in entry")]
     FieldNotFound(String),
 

@@ -37,6 +37,9 @@ pub enum Commands {
 
         #[arg(long, help = "Show TOTP code")]
         totp: bool,
+
+        #[arg(long, help = "Show field values (requires password re-entry)")]
+        show: bool,
     },
 
     #[command(about = "List all entries")]
@@ -46,6 +49,15 @@ pub enum Commands {
     Edit {
         #[arg(help = "Entry name")]
         name: String,
+
+        #[arg(short, long, help = "Interactive mode")]
+        interactive: bool,
+
+        #[arg(short, long, value_parser = parse_field, help = "Add or update field (key=value)")]
+        field: Vec<(String, String)>,
+
+        #[arg(long, help = "Remove field by key")]
+        rm_field: Vec<String>,
     },
 
     #[command(about = "Remove an entry")]
@@ -169,6 +181,18 @@ pub enum ProviderCommands {
 
         #[arg(help = "Provider ID")]
         provider_id: String,
+    },
+
+    #[command(about = "Delete a secret from provider")]
+    DeleteSecret {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+
+        #[arg(help = "Secret name to delete")]
+        secret_name: String,
     },
 
     #[command(about = "Remove a provider configuration")]

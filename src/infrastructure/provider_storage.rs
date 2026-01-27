@@ -108,11 +108,7 @@ pub fn create_provider(config: &ProviderConfig) -> Result<Box<dyn Provider>> {
                 .get("token")
                 .ok_or_else(|| ProviderError::ConfigError("Missing 'token' credential".to_string()))?;
 
-            Ok(Box::new(GitHubProvider::new(
-                config.provider_id.clone(),
-                repo.clone(),
-                token.clone(),
-            )))
+            Ok(Box::new(GitHubProvider::new(repo.clone(), token.clone())))
         }
         "cloudflare" => {
             let account_id = config
@@ -129,7 +125,6 @@ pub fn create_provider(config: &ProviderConfig) -> Result<Box<dyn Provider>> {
                 .ok_or_else(|| ProviderError::ConfigError("Missing 'token' credential".to_string()))?;
 
             Ok(Box::new(CloudflareProvider::new(
-                config.provider_id.clone(),
                 account_id.clone(),
                 worker_name.clone(),
                 token.clone(),

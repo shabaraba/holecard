@@ -25,6 +25,11 @@ pub fn handle_provider(ctx: &VaultContext, subcommand: &ProviderCommands) -> Res
             provider_type,
             provider_id,
         } => handle_secrets(ctx, provider_type, provider_id),
+        ProviderCommands::DeleteSecret {
+            provider_type,
+            provider_id,
+            secret_name,
+        } => handle_delete_secret(ctx, provider_type, provider_id, secret_name),
         ProviderCommands::Rm {
             provider_type,
             provider_id,
@@ -249,6 +254,42 @@ fn handle_secrets(ctx: &VaultContext, provider_type: &str, provider_id: &str) ->
         println!("  {}", secret);
     }
 
+    Ok(())
+}
+
+fn handle_delete_secret(
+    ctx: &VaultContext,
+    provider_type: &str,
+    provider_id: &str,
+    secret_name: &str,
+) -> Result<()> {
+    let configs = load_providers(ctx)?;
+    let key = make_provider_key(provider_type, provider_id);
+
+    let config = configs
+        .get(&key)
+        .ok_or_else(|| ProviderError::ProviderNotFound(key.clone()))?;
+
+    let provider = create_provider(config)?;
+
+    let confirm = Confirm::new()
+        .with_prompt(format!(
+            "Delete secret '{}' from {} / {}?",
+            secret_name, provider_type, provider_id
+        ))
+        .default(false)
+        .interact()?;
+
+    if !confirm {
+        println!("Cancelled.");
+        return Ok(());
+    }
+
+    provider
+        .delete_secret(secret_name)
+        .with_context(|| format!("Failed to delete secret: {}", secret_name))?;
+
+    println!("✓ Deleted secret: {}", secret_name);
     Ok(())
 }
 

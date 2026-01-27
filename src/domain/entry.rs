@@ -36,4 +36,8 @@ impl Entry {
         self.notes = notes;
         self.updated_at = Utc::now();
     }
+
+    pub fn touch(&mut self) {
+        self.updated_at = Utc::now();
+    }
 }

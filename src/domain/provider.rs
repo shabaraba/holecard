@@ -20,12 +20,6 @@ pub trait Provider: Send + Sync {
 
     /// Delete a secret from the provider
     fn delete_secret(&self, key: &str) -> Result<()>;
-
-    /// Get provider name (e.g., "github", "cloudflare")
-    fn provider_type(&self) -> &str;
-
-    /// Get provider ID (e.g., "my-repo", "my-worker")
-    fn provider_id(&self) -> &str;
 }
 
 /// Convert field name to secret name (snake_case/camelCase -> UPPER_SNAKE_CASE)

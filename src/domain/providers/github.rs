@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 pub struct GitHubProvider {
     repo: String,
     token: String,
-    provider_id: String,
 }
 
 #[derive(Serialize)]
@@ -33,12 +32,8 @@ struct SecretInfo {
 }
 
 impl GitHubProvider {
-    pub fn new(provider_id: String, repo: String, token: String) -> Self {
-        Self {
-            repo,
-            token,
-            provider_id,
-        }
+    pub fn new(repo: String, token: String) -> Self {
+        Self { repo, token }
     }
 
     fn get_public_key(&self) -> Result<PublicKey> {
@@ -183,13 +178,5 @@ impl Provider for GitHubProvider {
         }
 
         Ok(())
-    }
-
-    fn provider_type(&self) -> &str {
-        "github"
-    }
-
-    fn provider_id(&self) -> &str {
-        &self.provider_id
     }
 }

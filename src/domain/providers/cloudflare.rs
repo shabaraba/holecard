@@ -7,7 +7,6 @@ pub struct CloudflareProvider {
     account_id: String,
     worker_name: String,
     token: String,
-    provider_id: String,
 }
 
 #[derive(Serialize)]
@@ -41,12 +40,11 @@ struct ApiError {
 }
 
 impl CloudflareProvider {
-    pub fn new(provider_id: String, account_id: String, worker_name: String, token: String) -> Self {
+    pub fn new(account_id: String, worker_name: String, token: String) -> Self {
         Self {
             account_id,
             worker_name,
             token,
-            provider_id,
         }
     }
 }
@@ -164,13 +162,5 @@ impl Provider for CloudflareProvider {
         }
 
         Ok(())
-    }
-
-    fn provider_type(&self) -> &str {
-        "cloudflare"
-    }
-
-    fn provider_id(&self) -> &str {
-        &self.provider_id
     }
 }

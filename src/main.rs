@@ -21,11 +21,25 @@ fn main() -> Result<()> {
         Commands::Add { name, field } => {
             handlers::vault::handle_add(name, field, &keyring, &config_dir)
         }
-        Commands::Get { name, clip, totp } => {
-            handlers::vault::handle_get(&name, clip, totp, &keyring, &config_dir)
-        }
+        Commands::Get {
+            name,
+            clip,
+            totp,
+            show,
+        } => handlers::vault::handle_get(&name, clip, totp, show, &keyring, &config_dir),
         Commands::List => handlers::vault::handle_list(&keyring, &config_dir),
-        Commands::Edit { name } => handlers::vault::handle_edit(&name, &keyring, &config_dir),
+        Commands::Edit {
+            name,
+            interactive,
+            field,
+            rm_field,
+        } => {
+            if interactive {
+                handlers::vault::handle_edit_interactive(&name, &keyring, &config_dir)
+            } else {
+                handlers::vault::handle_edit(&name, field, rm_field, &keyring, &config_dir)
+            }
+        }
         Commands::Rm { name } => handlers::vault::handle_rm(&name, &keyring, &config_dir),
         Commands::Config { subcommand } => handlers::config::handle_config(subcommand, &config_dir),
         Commands::Inject { entry, template } => {
