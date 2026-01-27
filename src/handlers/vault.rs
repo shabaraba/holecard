@@ -259,7 +259,9 @@ pub fn handle_edit(
         ctx.save()?;
         println!("✓ Entry '{}' updated successfully!", name);
     } else {
-        println!("⚠ No changes specified. Use -f to add/update fields or --rm-field to remove fields.");
+        println!(
+            "⚠ No changes specified. Use -f to add/update fields or --rm-field to remove fields."
+        );
     }
 
     Ok(())

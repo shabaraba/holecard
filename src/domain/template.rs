@@ -80,17 +80,9 @@ impl TemplateEngine {
                 .get_entry(entry_name)
                 .with_context(|| format!("Entry '{}' not found in vault", entry_name))?;
 
-            entry
-                .custom_fields
-                .get(field_name)
-                .cloned()
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Field '{}' not found in entry '{}'",
-                        field_name,
-                        entry_name
-                    )
-                })
+            entry.custom_fields.get(field_name).cloned().ok_or_else(|| {
+                anyhow::anyhow!("Field '{}' not found in entry '{}'", field_name, entry_name)
+            })
         } else {
             Ok(value.to_string())
         }

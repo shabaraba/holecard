@@ -1,12 +1,14 @@
 use crate::domain::provider::Provider;
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use reqwest::blocking::{Client, RequestBuilder, Response};
 use serde::{Deserialize, Serialize};
 
 /// GitHub Actions Secrets Provider
 pub struct GitHubProvider {
     repo: String,
     token: String,
+    client: Client,
 }
 
 #[derive(Serialize)]
@@ -33,7 +35,30 @@ struct SecretInfo {
 
 impl GitHubProvider {
     pub fn new(repo: String, token: String) -> Self {
-        Self { repo, token }
+        Self {
+            repo,
+            token,
+            client: Client::new(),
+        }
+    }
+
+    fn with_github_headers(&self, builder: RequestBuilder) -> RequestBuilder {
+        builder
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("User-Agent", "holecard-cli")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+    }
+
+    fn check_response(response: Response) -> Result<Response> {
+        if response.status().is_success() {
+            return Ok(response);
+        }
+        Err(anyhow!(
+            "GitHub API error: {} - {}",
+            response.status(),
+            response.text().unwrap_or_default()
+        ))
     }
 
     fn get_public_key(&self) -> Result<PublicKey> {
@@ -42,25 +67,12 @@ impl GitHubProvider {
             self.repo
         );
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .get(&url)
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("User-Agent", "holecard-cli")
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28")
+        let response = self
+            .with_github_headers(self.client.get(&url))
             .send()
             .context("Failed to fetch GitHub public key")?;
 
-        if !response.status().is_success() {
-            return Err(anyhow!(
-                "GitHub API error: {} - {}",
-                response.status(),
-                response.text().unwrap_or_default()
-            ));
-        }
-
-        response
+        Self::check_response(response)?
             .json::<PublicKey>()
             .context("Failed to parse public key response")
     }
@@ -100,53 +112,25 @@ impl Provider for GitHubProvider {
             key_id: public_key.key_id,
         };
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("User-Agent", "holecard-cli")
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28")
+        let response = self
+            .with_github_headers(self.client.put(&url))
             .json(&payload)
             .send()
             .context("Failed to push secret to GitHub")?;
 
-        if !response.status().is_success() {
-            return Err(anyhow!(
-                "GitHub API error: {} - {}",
-                response.status(),
-                response.text().unwrap_or_default()
-            ));
-        }
-
+        Self::check_response(response)?;
         Ok(())
     }
 
     fn list_secrets(&self) -> Result<Vec<String>> {
-        let url = format!(
-            "https://api.github.com/repos/{}/actions/secrets",
-            self.repo
-        );
+        let url = format!("https://api.github.com/repos/{}/actions/secrets", self.repo);
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .get(&url)
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("User-Agent", "holecard-cli")
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28")
+        let response = self
+            .with_github_headers(self.client.get(&url))
             .send()
             .context("Failed to list secrets from GitHub")?;
 
-        if !response.status().is_success() {
-            return Err(anyhow!(
-                "GitHub API error: {} - {}",
-                response.status(),
-                response.text().unwrap_or_default()
-            ));
-        }
-
-        let secrets_list: SecretsList = response
+        let secrets_list: SecretsList = Self::check_response(response)?
             .json()
             .context("Failed to parse secrets list response")?;
 
@@ -159,24 +143,12 @@ impl Provider for GitHubProvider {
             self.repo, key
         );
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .delete(&url)
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("User-Agent", "holecard-cli")
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28")
+        let response = self
+            .with_github_headers(self.client.delete(&url))
             .send()
             .context("Failed to delete secret from GitHub")?;
 
-        if !response.status().is_success() {
-            return Err(anyhow!(
-                "GitHub API error: {} - {}",
-                response.status(),
-                response.text().unwrap_or_default()
-            ));
-        }
-
+        Self::check_response(response)?;
         Ok(())
     }
 }

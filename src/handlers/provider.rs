@@ -1,10 +1,71 @@
 use crate::cli::commands::{ProviderAddCommands, ProviderCommands, ProviderSecretsCommands};
 use crate::context::VaultContext;
-use crate::domain::{error::ProviderError, field_to_secret_name, ProviderConfig, TemplateEngine};
+use crate::domain::{
+    error::ProviderError, field_to_secret_name, ProviderConfig, TemplateEngine, Vault,
+};
 use crate::infrastructure::{create_provider, CryptoServiceImpl, ProviderStorage};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use std::collections::HashMap;
+
+struct ExtractedCredentials {
+    provider_type: &'static str,
+    provider_id: String,
+    credentials: HashMap<String, String>,
+}
+
+fn extract_credentials(
+    provider: &ProviderAddCommands,
+    vault: &Vault,
+) -> Result<ExtractedCredentials> {
+    match provider {
+        ProviderAddCommands::Github {
+            provider_id,
+            repo,
+            token,
+        } => {
+            let mut creds = HashMap::new();
+            creds.insert(
+                "repo".to_string(),
+                TemplateEngine::resolve_value(repo, vault)?,
+            );
+            creds.insert(
+                "token".to_string(),
+                TemplateEngine::resolve_value(token, vault)?,
+            );
+            Ok(ExtractedCredentials {
+                provider_type: "github",
+                provider_id: provider_id.clone(),
+                credentials: creds,
+            })
+        }
+        ProviderAddCommands::Cloudflare {
+            provider_id,
+            account_id,
+            worker_name,
+            token,
+        } => {
+            let mut creds = HashMap::new();
+            creds.insert(
+                "account_id".to_string(),
+                TemplateEngine::resolve_value(account_id, vault)?,
+            );
+            creds.insert(
+                "worker_name".to_string(),
+                TemplateEngine::resolve_value(worker_name, vault)?,
+            );
+            creds.insert(
+                "token".to_string(),
+                TemplateEngine::resolve_value(token, vault)?,
+            );
+            Ok(ExtractedCredentials {
+                provider_type: "cloudflare",
+                provider_id: provider_id.clone(),
+                credentials: creds,
+            })
+        }
+    }
+}
 
 pub fn handle_provider(ctx: &VaultContext, subcommand: &ProviderCommands) -> Result<()> {
     match subcommand {
@@ -35,7 +96,14 @@ fn handle_secrets_command(ctx: &VaultContext, subcommand: &ProviderSecretsComman
             entry_field,
             as_name,
             expand,
-        } => handle_secrets_add(ctx, provider_type, provider_id, entry_field, as_name, *expand),
+        } => handle_secrets_add(
+            ctx,
+            provider_type,
+            provider_id,
+            entry_field,
+            as_name,
+            *expand,
+        ),
         ProviderSecretsCommands::Remove {
             provider_type,
             provider_id,
@@ -44,26 +112,50 @@ fn handle_secrets_command(ctx: &VaultContext, subcommand: &ProviderSecretsComman
     }
 }
 
+fn create_storage() -> ProviderStorage<CryptoServiceImpl> {
+    ProviderStorage::new(CryptoServiceImpl::new())
+}
+
 fn get_provider_path(ctx: &VaultContext) -> std::path::PathBuf {
     ctx.config_dir.join("providers.enc")
 }
 
 fn load_providers(ctx: &VaultContext) -> Result<HashMap<String, ProviderConfig>> {
-    let crypto = CryptoServiceImpl::new();
-    let storage = ProviderStorage::new(crypto);
-    let path = get_provider_path(ctx);
-    storage.load(&path, &ctx.session_data.derived_key)
+    let storage = create_storage();
+    storage.load(&get_provider_path(ctx), &ctx.session_data.derived_key)
 }
 
 fn save_providers(ctx: &VaultContext, configs: &HashMap<String, ProviderConfig>) -> Result<()> {
-    let crypto = CryptoServiceImpl::new();
-    let storage = ProviderStorage::new(crypto);
-    let path = get_provider_path(ctx);
-    storage.save(configs, &path, &ctx.session_data.derived_key, &ctx.session_data.salt)
+    let storage = create_storage();
+    storage.save(
+        configs,
+        &get_provider_path(ctx),
+        &ctx.session_data.derived_key,
+        &ctx.session_data.salt,
+    )
 }
 
 fn make_provider_key(provider_type: &str, provider_id: &str) -> String {
     format!("{}:{}", provider_type, provider_id)
+}
+
+fn get_provider_config<'a>(
+    configs: &'a HashMap<String, ProviderConfig>,
+    provider_type: &str,
+    provider_id: &str,
+) -> Result<&'a ProviderConfig> {
+    let key = make_provider_key(provider_type, provider_id);
+    configs
+        .get(&key)
+        .ok_or_else(|| ProviderError::ProviderNotFound(key).into())
+}
+
+fn confirm_action(prompt: &str) -> Result<bool> {
+    Confirm::new()
+        .with_prompt(prompt)
+        .default(false)
+        .interact()
+        .context("Failed to read confirmation")
 }
 
 fn handle_edit(
@@ -79,32 +171,9 @@ fn handle_edit(
         return Err(ProviderError::ProviderNotFound(key).into());
     }
 
-    let (new_provider_type, new_provider_id, credentials) = match provider {
-        ProviderAddCommands::Github {
-            provider_id: _,
-            repo,
-            token,
-        } => {
-            let mut creds = HashMap::new();
-            creds.insert("repo".to_string(), TemplateEngine::resolve_value(repo, &ctx.vault)?);
-            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
-            ("github", provider_id, creds)
-        }
-        ProviderAddCommands::Cloudflare {
-            provider_id: _,
-            account_id,
-            worker_name,
-            token,
-        } => {
-            let mut creds = HashMap::new();
-            creds.insert("account_id".to_string(), TemplateEngine::resolve_value(account_id, &ctx.vault)?);
-            creds.insert("worker_name".to_string(), TemplateEngine::resolve_value(worker_name, &ctx.vault)?);
-            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
-            ("cloudflare", provider_id, creds)
-        }
-    };
+    let extracted = extract_credentials(provider, &ctx.vault)?;
 
-    if new_provider_type != provider_type {
+    if extracted.provider_type != provider_type {
         return Err(ProviderError::ConfigError(
             "Cannot change provider type. Remove and add a new provider instead.".to_string(),
         )
@@ -112,9 +181,9 @@ fn handle_edit(
     }
 
     let config = ProviderConfig {
-        provider_type: new_provider_type.to_string(),
-        provider_id: new_provider_id.to_string(),
-        credentials,
+        provider_type: extracted.provider_type.to_string(),
+        provider_id: provider_id.to_string(),
+        credentials: extracted.credentials,
     };
 
     configs.insert(key.clone(), config);
@@ -125,52 +194,31 @@ fn handle_edit(
 }
 
 fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> {
-    let (provider_type, provider_id, credentials) = match provider {
-        ProviderAddCommands::Github {
-            provider_id,
-            repo,
-            token,
-        } => {
-            let mut creds = HashMap::new();
-            creds.insert("repo".to_string(), TemplateEngine::resolve_value(repo, &ctx.vault)?);
-            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
-            ("github", provider_id, creds)
-        }
-        ProviderAddCommands::Cloudflare {
-            provider_id,
-            account_id,
-            worker_name,
-            token,
-        } => {
-            let mut creds = HashMap::new();
-            creds.insert("account_id".to_string(), TemplateEngine::resolve_value(account_id, &ctx.vault)?);
-            creds.insert("worker_name".to_string(), TemplateEngine::resolve_value(worker_name, &ctx.vault)?);
-            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
-            ("cloudflare", provider_id, creds)
-        }
-    };
-
+    let extracted = extract_credentials(provider, &ctx.vault)?;
     let mut configs = load_providers(ctx)?;
-    let key = make_provider_key(provider_type, provider_id);
+    let key = make_provider_key(extracted.provider_type, &extracted.provider_id);
 
     if configs.contains_key(&key) {
         return Err(ProviderError::ProviderAlreadyExists(
-            provider_type.to_string(),
-            provider_id.to_string(),
+            extracted.provider_type.to_string(),
+            extracted.provider_id.clone(),
         )
         .into());
     }
 
     let config = ProviderConfig {
-        provider_type: provider_type.to_string(),
-        provider_id: provider_id.to_string(),
-        credentials,
+        provider_type: extracted.provider_type.to_string(),
+        provider_id: extracted.provider_id.clone(),
+        credentials: extracted.credentials,
     };
 
     configs.insert(key, config);
     save_providers(ctx, &configs)?;
 
-    println!("✓ Provider added: {} / {}", provider_type, provider_id);
+    println!(
+        "✓ Provider added: {} / {}",
+        extracted.provider_type, extracted.provider_id
+    );
     Ok(())
 }
 
@@ -183,12 +231,7 @@ fn handle_secrets_add(
     expand: bool,
 ) -> Result<()> {
     let configs = load_providers(ctx)?;
-    let key = make_provider_key(provider_type, provider_id);
-
-    let config = configs
-        .get(&key)
-        .ok_or_else(|| ProviderError::ProviderNotFound(key.clone()))?;
-
+    let config = get_provider_config(&configs, provider_type, provider_id)?;
     let provider = create_provider(config)?;
 
     let parts: Vec<&str> = entry_field.split('.').collect();
@@ -214,7 +257,7 @@ fn handle_secrets_add(
         }
 
         println!(
-            "⚠️  About to push {} field(s) to {} / {}:",
+            "About to push {} field(s) to {} / {}:",
             entry.custom_fields.len(),
             provider_type,
             provider_id
@@ -224,11 +267,7 @@ fn handle_secrets_add(
             println!("   {} = {} (masked)", secret_name, mask_value(value));
         }
 
-        if !Confirm::new()
-            .with_prompt("Continue?")
-            .default(false)
-            .interact()?
-        {
+        if !confirm_action("Continue?")? {
             println!("Cancelled.");
             return Ok(());
         }
@@ -238,7 +277,7 @@ fn handle_secrets_add(
             provider
                 .push_secret(&secret_name, value)
                 .with_context(|| format!("Failed to push secret: {}", secret_name))?;
-            println!("✓ Pushed: {}", secret_name);
+            println!("Pushed: {}", secret_name);
         }
     } else {
         let field = field_name.ok_or_else(|| {
@@ -257,15 +296,14 @@ fn handle_secrets_add(
             .map(|s| s.to_string())
             .unwrap_or_else(|| field_to_secret_name(field));
 
-        println!("⚠️  About to push secret to {} / {}:", provider_type, provider_id);
+        println!(
+            "About to push secret to {} / {}:",
+            provider_type, provider_id
+        );
         println!("   Secret name: {}", secret_name);
         println!("   Value: {} (masked)", mask_value(value));
 
-        if !Confirm::new()
-            .with_prompt("Continue?")
-            .default(false)
-            .interact()?
-        {
+        if !confirm_action("Continue?")? {
             println!("Cancelled.");
             return Ok(());
         }
@@ -273,7 +311,7 @@ fn handle_secrets_add(
         provider
             .push_secret(&secret_name, value)
             .with_context(|| format!("Failed to push secret: {}", secret_name))?;
-        println!("✓ Pushed: {}", secret_name);
+        println!("Pushed: {}", secret_name);
     }
 
     Ok(())
@@ -288,9 +326,9 @@ fn handle_list(ctx: &VaultContext) -> Result<()> {
     }
 
     println!("Configured providers:");
-    for (_key, config) in &configs {
+    for config in configs.values() {
         println!("  {} / {}", config.provider_type, config.provider_id);
-        for (cred_key, _) in &config.credentials {
+        for cred_key in config.credentials.keys() {
             println!("    {}: ***", cred_key);
         }
     }
@@ -300,12 +338,7 @@ fn handle_list(ctx: &VaultContext) -> Result<()> {
 
 fn handle_secrets_list(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> Result<()> {
     let configs = load_providers(ctx)?;
-    let key = make_provider_key(provider_type, provider_id);
-
-    let config = configs
-        .get(&key)
-        .ok_or_else(|| ProviderError::ProviderNotFound(key.clone()))?;
-
+    let config = get_provider_config(&configs, provider_type, provider_id)?;
     let provider = create_provider(config)?;
     let secrets = provider.list_secrets()?;
 
@@ -329,23 +362,14 @@ fn handle_secrets_remove(
     secret_name: &str,
 ) -> Result<()> {
     let configs = load_providers(ctx)?;
-    let key = make_provider_key(provider_type, provider_id);
-
-    let config = configs
-        .get(&key)
-        .ok_or_else(|| ProviderError::ProviderNotFound(key.clone()))?;
-
+    let config = get_provider_config(&configs, provider_type, provider_id)?;
     let provider = create_provider(config)?;
 
-    let confirm = Confirm::new()
-        .with_prompt(format!(
-            "Delete secret '{}' from {} / {}?",
-            secret_name, provider_type, provider_id
-        ))
-        .default(false)
-        .interact()?;
-
-    if !confirm {
+    let prompt = format!(
+        "Delete secret '{}' from {} / {}?",
+        secret_name, provider_type, provider_id
+    );
+    if !confirm_action(&prompt)? {
         println!("Cancelled.");
         return Ok(());
     }
@@ -366,15 +390,8 @@ fn handle_remove(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> 
         return Err(ProviderError::ProviderNotFound(key).into());
     }
 
-    let confirm = Confirm::new()
-        .with_prompt(format!(
-            "Remove provider {} / {}?",
-            provider_type, provider_id
-        ))
-        .default(false)
-        .interact()?;
-
-    if !confirm {
+    let prompt = format!("Remove provider {} / {}?", provider_type, provider_id);
+    if !confirm_action(&prompt)? {
         println!("Cancelled.");
         return Ok(());
     }

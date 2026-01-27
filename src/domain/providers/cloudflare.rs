@@ -1,5 +1,6 @@
 use crate::domain::provider::Provider;
 use anyhow::{anyhow, Context, Result};
+use reqwest::blocking::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
 
 /// Cloudflare Workers Secrets Provider
@@ -7,6 +8,7 @@ pub struct CloudflareProvider {
     account_id: String,
     worker_name: String,
     token: String,
+    client: Client,
 }
 
 #[derive(Serialize)]
@@ -45,37 +47,50 @@ impl CloudflareProvider {
             account_id,
             worker_name,
             token,
+            client: Client::new(),
         }
+    }
+
+    fn with_cloudflare_headers(&self, builder: RequestBuilder) -> RequestBuilder {
+        builder
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Content-Type", "application/json")
+    }
+
+    fn secrets_url(&self) -> String {
+        format!(
+            "https://api.cloudflare.com/client/v4/accounts/{}/workers/scripts/{}/secrets",
+            self.account_id, self.worker_name
+        )
+    }
+
+    fn check_api_response(response: ApiResponse) -> Result<()> {
+        if response.success {
+            return Ok(());
+        }
+        let errors: Vec<String> = response.errors.into_iter().map(|e| e.message).collect();
+        Err(anyhow!("Cloudflare API errors: {}", errors.join(", ")))
     }
 }
 
 impl Provider for CloudflareProvider {
     fn push_secret(&self, key: &str, value: &str) -> Result<()> {
-        let url = format!(
-            "https://api.cloudflare.com/client/v4/accounts/{}/workers/scripts/{}/secrets",
-            self.account_id, self.worker_name
-        );
-
         let payload = SecretPayload {
             name: key.to_string(),
             text: value.to_string(),
             secret_type: "secret_text".to_string(),
         };
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("Content-Type", "application/json")
+        let response = self
+            .with_cloudflare_headers(self.client.put(self.secrets_url()))
             .json(&payload)
             .send()
             .context("Failed to push secret to Cloudflare")?;
 
         if !response.status().is_success() {
-            let error_text = response.text().unwrap_or_default();
             return Err(anyhow!(
                 "Cloudflare API error: {}",
-                error_text
+                response.text().unwrap_or_default()
             ));
         }
 
@@ -83,28 +98,12 @@ impl Provider for CloudflareProvider {
             .json()
             .context("Failed to parse Cloudflare API response")?;
 
-        if !api_response.success {
-            let errors: Vec<String> = api_response
-                .errors
-                .into_iter()
-                .map(|e| e.message)
-                .collect();
-            return Err(anyhow!("Cloudflare API errors: {}", errors.join(", ")));
-        }
-
-        Ok(())
+        Self::check_api_response(api_response)
     }
 
     fn list_secrets(&self) -> Result<Vec<String>> {
-        let url = format!(
-            "https://api.cloudflare.com/client/v4/accounts/{}/workers/scripts/{}/secrets",
-            self.account_id, self.worker_name
-        );
-
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .get(&url)
-            .header("Authorization", format!("Bearer {}", self.token))
+        let response = self
+            .with_cloudflare_headers(self.client.get(self.secrets_url()))
             .send()
             .context("Failed to list secrets from Cloudflare")?;
 
@@ -128,15 +127,10 @@ impl Provider for CloudflareProvider {
     }
 
     fn delete_secret(&self, key: &str) -> Result<()> {
-        let url = format!(
-            "https://api.cloudflare.com/client/v4/accounts/{}/workers/scripts/{}/secrets/{}",
-            self.account_id, self.worker_name, key
-        );
+        let url = format!("{}/{}", self.secrets_url(), key);
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .delete(&url)
-            .header("Authorization", format!("Bearer {}", self.token))
+        let response = self
+            .with_cloudflare_headers(self.client.delete(&url))
             .send()
             .context("Failed to delete secret from Cloudflare")?;
 
@@ -152,15 +146,6 @@ impl Provider for CloudflareProvider {
             .json()
             .context("Failed to parse Cloudflare API response")?;
 
-        if !api_response.success {
-            let errors: Vec<String> = api_response
-                .errors
-                .into_iter()
-                .map(|e| e.message)
-                .collect();
-            return Err(anyhow!("Cloudflare API errors: {}", errors.join(", ")));
-        }
-
-        Ok(())
+        Self::check_api_response(api_response)
     }
 }

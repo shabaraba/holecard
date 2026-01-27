@@ -31,11 +31,12 @@ impl<C: CryptoService> ProviderStorage<C> {
             return Ok(HashMap::new());
         }
 
-        let encrypted_data = fs::read(path)
-            .context("Failed to read provider config file")?;
+        let encrypted_data = fs::read(path).context("Failed to read provider config file")?;
 
         if encrypted_data.len() < SALT_LEN {
-            return Err(CryptoError::InvalidData("Provider config file too short".to_string()).into());
+            return Err(
+                CryptoError::InvalidData("Provider config file too short".to_string()).into(),
+            );
         }
 
         let ciphertext = &encrypted_data[SALT_LEN..];
@@ -56,12 +57,11 @@ impl<C: CryptoService> ProviderStorage<C> {
         salt: &[u8; 16],
     ) -> Result<()> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .context("Failed to create provider config directory")?;
+            fs::create_dir_all(parent).context("Failed to create provider config directory")?;
         }
 
-        let json_data = serde_json::to_vec(configs)
-            .context("Failed to serialize provider config")?;
+        let json_data =
+            serde_json::to_vec(configs).context("Failed to serialize provider config")?;
 
         let ciphertext = self.crypto.encrypt_with_key(&json_data, derived_key)?;
 
@@ -74,8 +74,7 @@ impl<C: CryptoService> ProviderStorage<C> {
 
     fn write_config_file(&self, path: &Path, encrypted_data: &[u8]) -> Result<()> {
         let temp_path = path.with_extension("tmp");
-        fs::write(&temp_path, encrypted_data)
-            .context("Failed to write provider config file")?;
+        fs::write(&temp_path, encrypted_data).context("Failed to write provider config file")?;
 
         #[cfg(unix)]
         {
@@ -84,12 +83,10 @@ impl<C: CryptoService> ProviderStorage<C> {
                 .context("Failed to get file metadata")?
                 .permissions();
             perms.set_mode(0o600);
-            fs::set_permissions(&temp_path, perms)
-                .context("Failed to set file permissions")?;
+            fs::set_permissions(&temp_path, perms).context("Failed to set file permissions")?;
         }
 
-        fs::rename(&temp_path, path)
-            .context("Failed to finalize provider config file")?;
+        fs::rename(&temp_path, path).context("Failed to finalize provider config file")?;
 
         Ok(())
     }
@@ -99,30 +96,25 @@ impl<C: CryptoService> ProviderStorage<C> {
 pub fn create_provider(config: &ProviderConfig) -> Result<Box<dyn Provider>> {
     match config.provider_type.as_str() {
         "github" => {
-            let repo = config
-                .credentials
-                .get("repo")
-                .ok_or_else(|| ProviderError::ConfigError("Missing 'repo' credential".to_string()))?;
-            let token = config
-                .credentials
-                .get("token")
-                .ok_or_else(|| ProviderError::ConfigError("Missing 'token' credential".to_string()))?;
+            let repo = config.credentials.get("repo").ok_or_else(|| {
+                ProviderError::ConfigError("Missing 'repo' credential".to_string())
+            })?;
+            let token = config.credentials.get("token").ok_or_else(|| {
+                ProviderError::ConfigError("Missing 'token' credential".to_string())
+            })?;
 
             Ok(Box::new(GitHubProvider::new(repo.clone(), token.clone())))
         }
         "cloudflare" => {
-            let account_id = config
-                .credentials
-                .get("account_id")
-                .ok_or_else(|| ProviderError::ConfigError("Missing 'account_id' credential".to_string()))?;
-            let worker_name = config
-                .credentials
-                .get("worker_name")
-                .ok_or_else(|| ProviderError::ConfigError("Missing 'worker_name' credential".to_string()))?;
-            let token = config
-                .credentials
-                .get("token")
-                .ok_or_else(|| ProviderError::ConfigError("Missing 'token' credential".to_string()))?;
+            let account_id = config.credentials.get("account_id").ok_or_else(|| {
+                ProviderError::ConfigError("Missing 'account_id' credential".to_string())
+            })?;
+            let worker_name = config.credentials.get("worker_name").ok_or_else(|| {
+                ProviderError::ConfigError("Missing 'worker_name' credential".to_string())
+            })?;
+            let token = config.credentials.get("token").ok_or_else(|| {
+                ProviderError::ConfigError("Missing 'token' credential".to_string())
+            })?;
 
             Ok(Box::new(CloudflareProvider::new(
                 account_id.clone(),
@@ -133,6 +125,7 @@ pub fn create_provider(config: &ProviderConfig) -> Result<Box<dyn Provider>> {
         _ => Err(ProviderError::ConfigError(format!(
             "Unknown provider type: {}",
             config.provider_type
-        )).into()),
+        ))
+        .into()),
     }
 }
