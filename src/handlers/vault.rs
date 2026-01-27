@@ -120,6 +120,7 @@ pub fn handle_get(
     name: &str,
     clip: Option<Option<String>>,
     totp: bool,
+    show: bool,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -135,8 +136,15 @@ pub fn handle_get(
 
     if !entry.custom_fields.is_empty() {
         println!("\nFields:");
-        for (key, value) in &entry.custom_fields {
-            println!("  {}: {}", key, value);
+        if show {
+            let _password = input::prompt_master_password()?;
+            for (key, value) in &entry.custom_fields {
+                println!("  {}: {}", key, value);
+            }
+        } else {
+            for key in entry.custom_fields.keys() {
+                println!("  {}: ******", key);
+            }
         }
     }
 
@@ -145,7 +153,11 @@ pub fn handle_get(
     }
 
     if let Some(notes) = &entry.notes {
-        println!("\nNotes: {}", notes);
+        if show {
+            println!("\nNotes: {}", notes);
+        } else {
+            println!("\nNotes: ******");
+        }
     }
 
     if let Some(field_name) = clip {
@@ -215,7 +227,51 @@ pub fn handle_list(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn handle_edit(name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
+pub fn handle_edit(
+    name: &str,
+    fields: Vec<(String, String)>,
+    rm_fields: Vec<String>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let mut ctx = VaultContext::load(keyring, config_dir)?;
+
+    let entry = ctx
+        .vault
+        .get_entry_mut(name)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    if !fields.is_empty() || !rm_fields.is_empty() {
+        for (key, value) in fields {
+            entry.custom_fields.insert(key.clone(), value);
+            println!("✓ Field '{}' updated", key);
+        }
+
+        for key in rm_fields {
+            if entry.custom_fields.remove(&key).is_some() {
+                println!("✓ Field '{}' removed", key);
+            } else {
+                println!("⚠ Field '{}' not found", key);
+            }
+        }
+
+        entry.touch();
+        ctx.save()?;
+        println!("✓ Entry '{}' updated successfully!", name);
+    } else {
+        println!(
+            "⚠ No changes specified. Use -f to add/update fields or --rm-field to remove fields."
+        );
+    }
+
+    Ok(())
+}
+
+pub fn handle_edit_interactive(
+    name: &str,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
     let entry = ctx
@@ -224,12 +280,35 @@ pub fn handle_edit(name: &str, keyring: &KeyringManager, config_dir: &Path) -> R
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     println!("Editing entry: {}", entry.name);
 
-    let new_fields = input::prompt_custom_fields()?;
-    entry.update_fields(new_fields);
+    loop {
+        match input::prompt_edit_menu(entry)? {
+            input::EditAction::Done => break,
+            input::EditAction::EditField(key) => {
+                let value = input::prompt_field_value(&key)?;
+                entry.custom_fields.insert(key.clone(), value);
+                println!("✓ Field '{}' updated", key);
+            }
+            input::EditAction::AddField => {
+                let (key, value) = input::prompt_new_field()?;
+                entry.custom_fields.insert(key.clone(), value);
+                println!("✓ Field '{}' added", key);
+            }
+            input::EditAction::DeleteField(key) => {
+                if entry.custom_fields.remove(&key).is_some() {
+                    println!("✓ Field '{}' removed", key);
+                } else {
+                    println!("⚠ Field '{}' not found", key);
+                }
+            }
+            input::EditAction::EditNotes => {
+                let new_notes = input::prompt_notes()?;
+                entry.update_notes(new_notes);
+                println!("✓ Notes updated");
+            }
+        }
+    }
 
-    let new_notes = input::prompt_notes()?;
-    entry.update_notes(new_notes);
-
+    entry.touch();
     ctx.save()?;
 
     println!("✓ Entry '{}' updated successfully!", name);

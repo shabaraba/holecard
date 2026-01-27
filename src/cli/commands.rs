@@ -13,45 +13,10 @@ pub enum Commands {
     #[command(about = "Initialize a new vault")]
     Init,
 
-    #[command(about = "Add a new entry")]
-    Add {
-        #[arg(help = "Entry name")]
-        name: Option<String>,
-
-        #[arg(short, long, value_parser = parse_field, help = "Custom field (key=value)")]
-        field: Vec<(String, String)>,
-    },
-
-    #[command(about = "Get an entry")]
-    Get {
-        #[arg(help = "Entry name")]
-        name: String,
-
-        #[arg(
-            short,
-            long,
-            value_name = "FIELD",
-            help = "Copy field to clipboard (optional field name, defaults to 'password' or first field)"
-        )]
-        clip: Option<Option<String>>,
-
-        #[arg(long, help = "Show TOTP code")]
-        totp: bool,
-    },
-
-    #[command(about = "List all entries")]
-    List,
-
-    #[command(about = "Edit an entry")]
-    Edit {
-        #[arg(help = "Entry name")]
-        name: String,
-    },
-
-    #[command(about = "Remove an entry")]
-    Rm {
-        #[arg(help = "Entry name")]
-        name: String,
+    #[command(about = "Manage vault entries")]
+    Entry {
+        #[command(subcommand)]
+        subcommand: EntryCommands,
     },
 
     #[command(about = "Manage configuration")]
@@ -104,6 +69,68 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: TotpCommands,
     },
+
+    #[command(about = "Manage secret providers (GitHub, Cloudflare, etc.)")]
+    Provider {
+        #[command(subcommand)]
+        subcommand: ProviderCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum EntryCommands {
+    #[command(about = "Add a new entry")]
+    Add {
+        #[arg(help = "Entry name")]
+        name: Option<String>,
+
+        #[arg(short, long, value_parser = parse_field, help = "Custom field (key=value)")]
+        field: Vec<(String, String)>,
+    },
+
+    #[command(about = "Get an entry")]
+    Get {
+        #[arg(help = "Entry name")]
+        name: String,
+
+        #[arg(
+            short,
+            long,
+            value_name = "FIELD",
+            help = "Copy field to clipboard (optional field name, defaults to 'password' or first field)"
+        )]
+        clip: Option<Option<String>>,
+
+        #[arg(long, help = "Show TOTP code")]
+        totp: bool,
+
+        #[arg(long, help = "Show field values (requires password re-entry)")]
+        show: bool,
+    },
+
+    #[command(about = "List all entries")]
+    List,
+
+    #[command(about = "Edit an entry")]
+    Edit {
+        #[arg(help = "Entry name")]
+        name: String,
+
+        #[arg(short, long, help = "Interactive mode")]
+        interactive: bool,
+
+        #[arg(short, long, value_parser = parse_field, help = "Add or update field (key=value)")]
+        field: Vec<(String, String)>,
+
+        #[arg(short = 'd', long = "rm-field", help = "Remove field by key")]
+        rm_field: Vec<String>,
+    },
+
+    #[command(about = "Remove an entry")]
+    Remove {
+        #[arg(help = "Entry name")]
+        name: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -118,6 +145,117 @@ pub enum ConfigCommands {
     SessionTimeout {
         #[arg(help = "Timeout in minutes")]
         minutes: u64,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ProviderCommands {
+    #[command(about = "List all configured providers")]
+    List,
+
+    #[command(about = "Add a new provider configuration")]
+    Add {
+        #[command(subcommand)]
+        provider: ProviderAddCommands,
+    },
+
+    #[command(about = "Edit provider authentication credentials")]
+    Edit {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+
+        #[command(subcommand)]
+        provider: ProviderAddCommands,
+    },
+
+    #[command(about = "Remove a provider configuration")]
+    Remove {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+    },
+
+    #[command(about = "Manage secrets in provider")]
+    Secrets {
+        #[command(subcommand)]
+        subcommand: ProviderSecretsCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ProviderSecretsCommands {
+    #[command(about = "List secrets in a provider")]
+    List {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+    },
+
+    #[command(about = "Add secret(s) to provider")]
+    Add {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+
+        #[arg(help = "Entry name or entry.field (e.g., myapp.db_url)")]
+        entry_field: String,
+
+        #[arg(long, help = "Override secret name in provider")]
+        as_name: Option<String>,
+
+        #[arg(long, help = "Push all fields from entry as separate secrets")]
+        expand: bool,
+    },
+
+    #[command(about = "Remove a secret from provider")]
+    Remove {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+
+        #[arg(help = "Secret name to delete")]
+        secret_name: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ProviderAddCommands {
+    #[command(about = "Add GitHub Actions Secrets provider")]
+    Github {
+        #[arg(help = "Provider ID (e.g., my-repo)")]
+        provider_id: String,
+
+        #[arg(long, help = "GitHub repository (owner/repo)")]
+        repo: String,
+
+        #[arg(long, help = "GitHub Personal Access Token")]
+        token: String,
+    },
+
+    #[command(about = "Add Cloudflare Workers Secrets provider")]
+    Cloudflare {
+        #[arg(help = "Provider ID (e.g., my-worker)")]
+        provider_id: String,
+
+        #[arg(long, help = "Cloudflare Account ID")]
+        account_id: String,
+
+        #[arg(long, help = "Worker name")]
+        worker_name: String,
+
+        #[arg(long, help = "Cloudflare API Token")]
+        token: String,
     },
 }
 

@@ -1,6 +1,8 @@
 pub mod crypto;
 pub mod entry;
 pub mod error;
+pub mod provider;
+pub mod providers;
 pub mod template;
 pub mod totp;
 pub mod vault;
@@ -10,6 +12,7 @@ pub use entry::Entry;
 pub use error::CryptoError;
 #[allow(unused_imports)]
 pub use error::VaultError;
+pub use provider::{field_to_secret_name, ProviderConfig};
 pub use template::TemplateEngine;
 pub use totp::TotpService;
 pub use vault::Vault;

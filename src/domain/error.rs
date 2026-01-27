@@ -26,3 +26,21 @@ pub enum CryptoError {
     #[error("Invalid encrypted data: {0}")]
     InvalidData(String),
 }
+
+#[derive(Error, Debug)]
+pub enum ProviderError {
+    #[error("Provider '{0}' not found")]
+    ProviderNotFound(String),
+
+    #[error("Provider '{0}' with ID '{1}' already exists")]
+    ProviderAlreadyExists(String, String),
+
+    #[error("Provider configuration error: {0}")]
+    ConfigError(String),
+
+    #[error("Field '{0}' not found in entry")]
+    FieldNotFound(String),
+
+    #[error("Invalid field name format: {0}")]
+    InvalidFieldFormat(String),
+}
