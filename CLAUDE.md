@@ -80,9 +80,17 @@ src/
 ### Data Flow
 
 1. `VaultContext::load()` checks for cached session or prompts for master password
-2. Key derivation: `master_password | secret_key` → Argon2id → 32-byte derived key
-3. Vault file format: `[16-byte salt][12-byte nonce][AES-256-GCM ciphertext]`
-4. Session stores derived key in system keyring with metadata file for timeout tracking
+2. Secret key is automatically retrieved from system keyring
+3. Key derivation: `master_password | secret_key` → Argon2id → 32-byte derived key
+4. Vault file format: `[16-byte salt][12-byte nonce][AES-256-GCM ciphertext]`
+5. Session stores derived key in system keyring with metadata file for timeout tracking
+
+### Backup and Recovery
+
+- **Backup**: `hc export <file>` creates encrypted JSON export with separate password
+- **Restore**: `hc import <file>` restores from encrypted export
+- No plaintext secret key backups are created
+- Export/import is the recommended backup strategy
 
 ### Configuration
 

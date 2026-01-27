@@ -152,9 +152,6 @@ fn handle_init(keyring: &KeyringManager, config_dir: &std::path::PathBuf) -> Res
 
     keyring.save_secret_key(&secret_key)?;
 
-    let secret_key_path = config_dir.join("secret_key_backup.txt");
-    std::fs::write(&secret_key_path, &secret_key).context("Failed to write secret key backup")?;
-
     let config = Config::load(config_dir)?;
     let mut vault = Vault::new();
     let storage = VaultStorage::new(crypto);
@@ -177,15 +174,13 @@ fn handle_init(keyring: &KeyringManager, config_dir: &std::path::PathBuf) -> Res
     println!("\n========================================");
     println!("     Vault Initialization Complete");
     println!("========================================");
-    println!("\nSecret Key has been saved to:");
-    println!("  {}", secret_key_path.display());
+    println!("\n✓ Master password set");
+    println!("✓ Secret key stored in system keyring");
+    println!("✓ TOTP entry created");
     println!("\nIMPORTANT:");
-    println!("  1. Copy this file to a secure backup location");
-    println!(
-        "  2. Delete the file after backing up: rm {}",
-        secret_key_path.display()
-    );
-    println!("  3. You will need the Secret Key + Master Password to access your vault");
+    println!("  • Use 'hc export' regularly to backup your vault");
+    println!("  • Keep your export file and password safe");
+    println!("  • You need BOTH the export file and its password to restore");
     println!("========================================\n");
 
     Ok(())

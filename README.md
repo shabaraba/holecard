@@ -162,14 +162,25 @@ hc init
 - **Encryption**: AES-256-GCM with random nonce per save
 - **Secret key**: 160-bit random key stored in system keyring
 
-### Secret Key Backup
+### Backup and Recovery
 
-During initialization, a backup of the secret key is saved to `~/.holecard/secret_key_backup.txt`.
+Use `hc export` to backup your entire vault:
+
+```bash
+hc export backup.json
+```
+
+The export file is encrypted with a password you choose. To restore:
+
+```bash
+hc import backup.json
+```
 
 **Important**:
-1. Copy this file to a secure offline location
-2. Delete the file after backing up: `rm ~/.holecard/secret_key_backup.txt`
-3. You need both the master password AND secret key to decrypt your vault
+- Store export files in a secure location (external drive, encrypted cloud storage, etc.)
+- Use a strong password for export encryption
+- You need BOTH the export file and its password to restore your vault
+- Regular backups protect against data loss
 
 ### Session Caching
 
