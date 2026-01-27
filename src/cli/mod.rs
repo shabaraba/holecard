@@ -1,4 +1,4 @@
 pub mod commands;
 pub mod input;
 
-pub use commands::{Cli, Commands, ConfigCommands};
+pub use commands::ConfigCommands;

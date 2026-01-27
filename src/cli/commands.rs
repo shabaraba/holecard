@@ -13,57 +13,10 @@ pub enum Commands {
     #[command(about = "Initialize a new vault")]
     Init,
 
-    #[command(about = "Add a new entry")]
-    Add {
-        #[arg(help = "Entry name")]
-        name: Option<String>,
-
-        #[arg(short, long, value_parser = parse_field, help = "Custom field (key=value)")]
-        field: Vec<(String, String)>,
-    },
-
-    #[command(about = "Get an entry")]
-    Get {
-        #[arg(help = "Entry name")]
-        name: String,
-
-        #[arg(
-            short,
-            long,
-            value_name = "FIELD",
-            help = "Copy field to clipboard (optional field name, defaults to 'password' or first field)"
-        )]
-        clip: Option<Option<String>>,
-
-        #[arg(long, help = "Show TOTP code")]
-        totp: bool,
-
-        #[arg(long, help = "Show field values (requires password re-entry)")]
-        show: bool,
-    },
-
-    #[command(about = "List all entries")]
-    List,
-
-    #[command(about = "Edit an entry")]
-    Edit {
-        #[arg(help = "Entry name")]
-        name: String,
-
-        #[arg(short, long, help = "Interactive mode")]
-        interactive: bool,
-
-        #[arg(short, long, value_parser = parse_field, help = "Add or update field (key=value)")]
-        field: Vec<(String, String)>,
-
-        #[arg(short = 'd', long = "rm-field", help = "Remove field by key")]
-        rm_field: Vec<String>,
-    },
-
-    #[command(about = "Remove an entry")]
-    Rm {
-        #[arg(help = "Entry name")]
-        name: String,
+    #[command(about = "Manage vault entries")]
+    Entry {
+        #[command(subcommand)]
+        subcommand: EntryCommands,
     },
 
     #[command(about = "Manage configuration")]
@@ -125,6 +78,62 @@ pub enum Commands {
 }
 
 #[derive(Subcommand)]
+pub enum EntryCommands {
+    #[command(about = "Add a new entry")]
+    Add {
+        #[arg(help = "Entry name")]
+        name: Option<String>,
+
+        #[arg(short, long, value_parser = parse_field, help = "Custom field (key=value)")]
+        field: Vec<(String, String)>,
+    },
+
+    #[command(about = "Get an entry")]
+    Get {
+        #[arg(help = "Entry name")]
+        name: String,
+
+        #[arg(
+            short,
+            long,
+            value_name = "FIELD",
+            help = "Copy field to clipboard (optional field name, defaults to 'password' or first field)"
+        )]
+        clip: Option<Option<String>>,
+
+        #[arg(long, help = "Show TOTP code")]
+        totp: bool,
+
+        #[arg(long, help = "Show field values (requires password re-entry)")]
+        show: bool,
+    },
+
+    #[command(about = "List all entries")]
+    List,
+
+    #[command(about = "Edit an entry")]
+    Edit {
+        #[arg(help = "Entry name")]
+        name: String,
+
+        #[arg(short, long, help = "Interactive mode")]
+        interactive: bool,
+
+        #[arg(short, long, value_parser = parse_field, help = "Add or update field (key=value)")]
+        field: Vec<(String, String)>,
+
+        #[arg(short = 'd', long = "rm-field", help = "Remove field by key")]
+        rm_field: Vec<String>,
+    },
+
+    #[command(about = "Remove an entry")]
+    Remove {
+        #[arg(help = "Entry name")]
+        name: String,
+    },
+}
+
+#[derive(Subcommand)]
 pub enum ConfigCommands {
     #[command(about = "Set vault file path")]
     VaultPath {
@@ -141,14 +150,56 @@ pub enum ConfigCommands {
 
 #[derive(Subcommand)]
 pub enum ProviderCommands {
+    #[command(about = "List all configured providers")]
+    List,
+
     #[command(about = "Add a new provider configuration")]
     Add {
         #[command(subcommand)]
         provider: ProviderAddCommands,
     },
 
-    #[command(about = "Push secret(s) to provider")]
-    Push {
+    #[command(about = "Edit provider authentication credentials")]
+    Edit {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+
+        #[command(subcommand)]
+        provider: ProviderAddCommands,
+    },
+
+    #[command(about = "Remove a provider configuration")]
+    Remove {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+    },
+
+    #[command(about = "Manage secrets in provider")]
+    Secrets {
+        #[command(subcommand)]
+        subcommand: ProviderSecretsCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ProviderSecretsCommands {
+    #[command(about = "List secrets in a provider")]
+    List {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+    },
+
+    #[command(about = "Add secret(s) to provider")]
+    Add {
         #[arg(help = "Provider type")]
         provider_type: String,
 
@@ -165,20 +216,8 @@ pub enum ProviderCommands {
         expand: bool,
     },
 
-    #[command(about = "List all configured providers")]
-    List,
-
-    #[command(about = "List secrets in a provider")]
-    Secrets {
-        #[arg(help = "Provider type")]
-        provider_type: String,
-
-        #[arg(help = "Provider ID")]
-        provider_id: String,
-    },
-
-    #[command(about = "Delete a secret from provider")]
-    DeleteSecret {
+    #[command(about = "Remove a secret from provider")]
+    Remove {
         #[arg(help = "Provider type")]
         provider_type: String,
 
@@ -187,15 +226,6 @@ pub enum ProviderCommands {
 
         #[arg(help = "Secret name to delete")]
         secret_name: String,
-    },
-
-    #[command(about = "Remove a provider configuration")]
-    Rm {
-        #[arg(help = "Provider type")]
-        provider_type: String,
-
-        #[arg(help = "Provider ID")]
-        provider_id: String,
     },
 }
 

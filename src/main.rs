@@ -7,7 +7,7 @@ mod infrastructure;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::{Cli, Commands};
+use cli::commands::{Cli, Commands, EntryCommands};
 use config::get_config_dir;
 use infrastructure::KeyringManager;
 
@@ -18,29 +18,33 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Init => handlers::vault::handle_init(&keyring, &config_dir),
-        Commands::Add { name, field } => {
-            handlers::vault::handle_add(name, field, &keyring, &config_dir)
-        }
-        Commands::Get {
-            name,
-            clip,
-            totp,
-            show,
-        } => handlers::vault::handle_get(&name, clip, totp, show, &keyring, &config_dir),
-        Commands::List => handlers::vault::handle_list(&keyring, &config_dir),
-        Commands::Edit {
-            name,
-            interactive,
-            field,
-            rm_field,
-        } => {
-            if interactive {
-                handlers::vault::handle_edit_interactive(&name, &keyring, &config_dir)
-            } else {
-                handlers::vault::handle_edit(&name, field, rm_field, &keyring, &config_dir)
+        Commands::Entry { subcommand } => match subcommand {
+            EntryCommands::Add { name, field } => {
+                handlers::vault::handle_add(name, field, &keyring, &config_dir)
             }
-        }
-        Commands::Rm { name } => handlers::vault::handle_rm(&name, &keyring, &config_dir),
+            EntryCommands::Get {
+                name,
+                clip,
+                totp,
+                show,
+            } => handlers::vault::handle_get(&name, clip, totp, show, &keyring, &config_dir),
+            EntryCommands::List => handlers::vault::handle_list(&keyring, &config_dir),
+            EntryCommands::Edit {
+                name,
+                interactive,
+                field,
+                rm_field,
+            } => {
+                if interactive {
+                    handlers::vault::handle_edit_interactive(&name, &keyring, &config_dir)
+                } else {
+                    handlers::vault::handle_edit(&name, field, rm_field, &keyring, &config_dir)
+                }
+            }
+            EntryCommands::Remove { name } => {
+                handlers::vault::handle_rm(&name, &keyring, &config_dir)
+            }
+        },
         Commands::Config { subcommand } => handlers::config::handle_config(subcommand, &config_dir),
         Commands::Inject { entry, template } => {
             handlers::template::handle_inject(&entry, &template, &keyring, &config_dir)

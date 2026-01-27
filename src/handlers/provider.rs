@@ -1,4 +1,4 @@
-use crate::cli::commands::{ProviderAddCommands, ProviderCommands};
+use crate::cli::commands::{ProviderAddCommands, ProviderCommands, ProviderSecretsCommands};
 use crate::context::VaultContext;
 use crate::domain::{error::ProviderError, field_to_secret_name, ProviderConfig, TemplateEngine};
 use crate::infrastructure::{create_provider, CryptoServiceImpl, ProviderStorage};
@@ -8,28 +8,39 @@ use std::collections::HashMap;
 
 pub fn handle_provider(ctx: &VaultContext, subcommand: &ProviderCommands) -> Result<()> {
     match subcommand {
+        ProviderCommands::List => handle_list(ctx),
         ProviderCommands::Add { provider } => handle_add(ctx, provider),
-        ProviderCommands::Push {
+        ProviderCommands::Edit {
+            provider_type,
+            provider_id,
+            provider,
+        } => handle_edit(ctx, provider_type, provider_id, provider),
+        ProviderCommands::Remove {
+            provider_type,
+            provider_id,
+        } => handle_remove(ctx, provider_type, provider_id),
+        ProviderCommands::Secrets { subcommand } => handle_secrets_command(ctx, subcommand),
+    }
+}
+
+fn handle_secrets_command(ctx: &VaultContext, subcommand: &ProviderSecretsCommands) -> Result<()> {
+    match subcommand {
+        ProviderSecretsCommands::List {
+            provider_type,
+            provider_id,
+        } => handle_secrets_list(ctx, provider_type, provider_id),
+        ProviderSecretsCommands::Add {
             provider_type,
             provider_id,
             entry_field,
             as_name,
             expand,
-        } => handle_push(ctx, provider_type, provider_id, entry_field, as_name, *expand),
-        ProviderCommands::List => handle_list(ctx),
-        ProviderCommands::Secrets {
-            provider_type,
-            provider_id,
-        } => handle_secrets(ctx, provider_type, provider_id),
-        ProviderCommands::DeleteSecret {
+        } => handle_secrets_add(ctx, provider_type, provider_id, entry_field, as_name, *expand),
+        ProviderSecretsCommands::Remove {
             provider_type,
             provider_id,
             secret_name,
-        } => handle_delete_secret(ctx, provider_type, provider_id, secret_name),
-        ProviderCommands::Rm {
-            provider_type,
-            provider_id,
-        } => handle_rm(ctx, provider_type, provider_id),
+        } => handle_secrets_remove(ctx, provider_type, provider_id, secret_name),
     }
 }
 
@@ -53,6 +64,64 @@ fn save_providers(ctx: &VaultContext, configs: &HashMap<String, ProviderConfig>)
 
 fn make_provider_key(provider_type: &str, provider_id: &str) -> String {
     format!("{}:{}", provider_type, provider_id)
+}
+
+fn handle_edit(
+    ctx: &VaultContext,
+    provider_type: &str,
+    provider_id: &str,
+    provider: &ProviderAddCommands,
+) -> Result<()> {
+    let mut configs = load_providers(ctx)?;
+    let key = make_provider_key(provider_type, provider_id);
+
+    if !configs.contains_key(&key) {
+        return Err(ProviderError::ProviderNotFound(key).into());
+    }
+
+    let (new_provider_type, new_provider_id, credentials) = match provider {
+        ProviderAddCommands::Github {
+            provider_id: _,
+            repo,
+            token,
+        } => {
+            let mut creds = HashMap::new();
+            creds.insert("repo".to_string(), TemplateEngine::resolve_value(repo, &ctx.vault)?);
+            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
+            ("github", provider_id, creds)
+        }
+        ProviderAddCommands::Cloudflare {
+            provider_id: _,
+            account_id,
+            worker_name,
+            token,
+        } => {
+            let mut creds = HashMap::new();
+            creds.insert("account_id".to_string(), TemplateEngine::resolve_value(account_id, &ctx.vault)?);
+            creds.insert("worker_name".to_string(), TemplateEngine::resolve_value(worker_name, &ctx.vault)?);
+            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
+            ("cloudflare", provider_id, creds)
+        }
+    };
+
+    if new_provider_type != provider_type {
+        return Err(ProviderError::ConfigError(
+            "Cannot change provider type. Remove and add a new provider instead.".to_string(),
+        )
+        .into());
+    }
+
+    let config = ProviderConfig {
+        provider_type: new_provider_type.to_string(),
+        provider_id: new_provider_id.to_string(),
+        credentials,
+    };
+
+    configs.insert(key.clone(), config);
+    save_providers(ctx, &configs)?;
+
+    println!("✓ Provider updated: {} / {}", provider_type, provider_id);
+    Ok(())
 }
 
 fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> {
@@ -105,7 +174,7 @@ fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> 
     Ok(())
 }
 
-fn handle_push(
+fn handle_secrets_add(
     ctx: &VaultContext,
     provider_type: &str,
     provider_id: &str,
@@ -229,7 +298,7 @@ fn handle_list(ctx: &VaultContext) -> Result<()> {
     Ok(())
 }
 
-fn handle_secrets(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> Result<()> {
+fn handle_secrets_list(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> Result<()> {
     let configs = load_providers(ctx)?;
     let key = make_provider_key(provider_type, provider_id);
 
@@ -253,7 +322,7 @@ fn handle_secrets(ctx: &VaultContext, provider_type: &str, provider_id: &str) ->
     Ok(())
 }
 
-fn handle_delete_secret(
+fn handle_secrets_remove(
     ctx: &VaultContext,
     provider_type: &str,
     provider_id: &str,
@@ -289,7 +358,7 @@ fn handle_delete_secret(
     Ok(())
 }
 
-fn handle_rm(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> Result<()> {
+fn handle_remove(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> Result<()> {
     let mut configs = load_providers(ctx)?;
     let key = make_provider_key(provider_type, provider_id);
 
