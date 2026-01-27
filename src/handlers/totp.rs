@@ -1,6 +1,6 @@
 use anyhow::Result;
 use copypasta::{ClipboardContext, ClipboardProvider};
-use std::path::PathBuf;
+use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
@@ -12,7 +12,7 @@ use crate::infrastructure::KeyringManager;
 pub fn handle_totp(
     subcommand: TotpCommands,
     keyring: &KeyringManager,
-    config_dir: &PathBuf,
+    config_dir: &Path,
 ) -> Result<()> {
     match subcommand {
         TotpCommands::Add { entry, secret } => {
@@ -27,7 +27,7 @@ fn handle_totp_add(
     service_name: &str,
     secret: &str,
     keyring: &KeyringManager,
-    config_dir: &PathBuf,
+    config_dir: &Path,
 ) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
@@ -53,11 +53,7 @@ fn handle_totp_add(
     Ok(())
 }
 
-fn handle_totp_get(
-    service_name: &str,
-    keyring: &KeyringManager,
-    config_dir: &PathBuf,
-) -> Result<()> {
+fn handle_totp_get(service_name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     let ctx = VaultContext::load(keyring, config_dir)?;
     let totp_entry = ctx.vault.get_entry("totp").map_err(|_| {
         anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
@@ -99,11 +95,7 @@ fn handle_totp_get(
     Ok(())
 }
 
-fn handle_totp_rm(
-    service_name: &str,
-    keyring: &KeyringManager,
-    config_dir: &PathBuf,
-) -> Result<()> {
+fn handle_totp_rm(service_name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     let mut ctx = VaultContext::load(keyring, config_dir)?;
 
     let totp_entry = ctx.vault.get_entry_mut("totp").map_err(|_| {

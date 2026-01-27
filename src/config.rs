@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -10,7 +10,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load(config_dir: &PathBuf) -> Result<Self> {
+    pub fn load(config_dir: &Path) -> Result<Self> {
         let config_path = config_dir.join("config.toml");
 
         if !config_path.exists() {
@@ -24,7 +24,7 @@ impl Config {
         toml::from_str(&content).context("Failed to parse config file")
     }
 
-    pub fn save(&self, config_dir: &PathBuf) -> Result<()> {
+    pub fn save(&self, config_dir: &Path) -> Result<()> {
         let config_path = config_dir.join("config.toml");
         let content = toml::to_string_pretty(self).context("Failed to serialize config")?;
 
@@ -32,7 +32,7 @@ impl Config {
         Ok(())
     }
 
-    fn default_with_dir(config_dir: &PathBuf) -> Self {
+    fn default_with_dir(config_dir: &Path) -> Self {
         Self {
             vault_path: config_dir.join("vault.enc"),
             session_timeout_minutes: 60,

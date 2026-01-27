@@ -1,10 +1,12 @@
 use anyhow::Result;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::cli::input;
 use crate::config::Config;
 use crate::domain::Vault;
-use crate::infrastructure::{CryptoServiceImpl, KeyringManager, SessionData, SessionManager, VaultStorage};
+use crate::infrastructure::{
+    CryptoServiceImpl, KeyringManager, SessionData, SessionManager, VaultStorage,
+};
 
 pub struct VaultContext {
     pub vault: Vault,
@@ -15,7 +17,7 @@ pub struct VaultContext {
 }
 
 impl VaultContext {
-    pub fn load(keyring: &KeyringManager, config_dir: &PathBuf) -> Result<Self> {
+    pub fn load(keyring: &KeyringManager, config_dir: &Path) -> Result<Self> {
         let secret_key = keyring.load_secret_key()?;
         let config = Config::load(config_dir)?;
         let crypto = CryptoServiceImpl::new();
@@ -47,7 +49,7 @@ impl VaultContext {
             storage,
             session_data,
             config,
-            config_dir: config_dir.clone(),
+            config_dir: config_dir.to_path_buf(),
         })
     }
 

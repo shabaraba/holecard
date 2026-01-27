@@ -1,10 +1,10 @@
 use anyhow::Result;
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::config::Config;
 use crate::infrastructure::SessionManager;
 
-pub fn handle_lock(config_dir: &PathBuf) -> Result<()> {
+pub fn handle_lock(config_dir: &Path) -> Result<()> {
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, config.session_timeout_minutes);
 
@@ -14,7 +14,7 @@ pub fn handle_lock(config_dir: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn handle_status(config_dir: &PathBuf) -> Result<()> {
+pub fn handle_status(config_dir: &Path) -> Result<()> {
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, config.session_timeout_minutes);
 

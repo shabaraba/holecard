@@ -2,6 +2,15 @@
 name = "hc"
 version = "0.1.0"
 edition = "2021"
+authors = ["shabarba"]
+description = "A secure CLI password manager with dual-key encryption and TOTP support"
+readme = "README.md"
+homepage = "https://github.com/shabarba/holecard"
+repository = "https://github.com/shabarba/holecard"
+license = "MIT OR Apache-2.0"
+keywords = ["password-manager", "cli", "security", "encryption", "totp"]
+categories = ["command-line-utilities", "cryptography"]
+exclude = [".github/", ".vibing/", "*.md"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -23,6 +32,17 @@ toml = "0.8"
 dirs = "5.0"
 totp-lite = "2.0"
 regex = "1.10"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.tar.gz"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.aarch64-apple-darwin]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-aarch64-apple-darwin.tar.gz"
+
+[package.metadata.binstall.overrides.x86_64-unknown-linux-gnu]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-x86_64-unknown-linux-gnu.tar.gz"
 
 [profile.release]
 opt-level = 3
