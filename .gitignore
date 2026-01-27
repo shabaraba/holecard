@@ -1,2 +1,22 @@
+# Rust
 /target
+Cargo.lock
+
+# IDE
 .vibing/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Distribution artifacts
+*.tar.gz
+*.sha256
+
+# Local development
+.holecard/
+*.enc

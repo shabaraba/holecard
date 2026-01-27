@@ -17,9 +17,41 @@ Secure CLI password manager with dual-key encryption.
 
 ## Installation
 
+### From source (recommended)
+
 ```bash
+git clone https://github.com/shabarba/holecard
+cd holecard
 cargo build --release
-cp target/release/hc ~/.local/bin/  # or your preferred location
+cp target/release/hc /usr/local/bin/  # or ~/.local/bin/
+```
+
+### From crates.io (coming soon)
+
+```bash
+cargo install hc
+```
+
+### From binary releases (coming soon)
+
+Download pre-built binaries from [GitHub Releases](https://github.com/shabarba/holecard/releases).
+
+**Supported platforms:**
+- macOS Apple Silicon (aarch64)
+- macOS Intel (x86_64)
+- Linux x86_64
+
+### With Homebrew (coming soon)
+
+```bash
+brew tap shabarba/tap
+brew install hc
+```
+
+### With cargo-binstall (coming soon)
+
+```bash
+cargo binstall hc
 ```
 
 ## Quick Start
@@ -194,6 +226,55 @@ The derived encryption key is cached in the system keyring to avoid repeated pas
 | `~/.holecard/vault.enc` | Encrypted vault (default) |
 | `~/.holecard/session.json` | Session metadata |
 
+## Platform Support
+
+- **macOS**: Apple Silicon (aarch64) and Intel (x86_64)
+- **Linux**: x86_64 GNU
+
+## Building from Source
+
+```bash
+# Clone repository
+git clone https://github.com/shabarba/holecard
+cd holecard
+
+# Build
+cargo build --release
+
+# Run tests
+cargo test
+
+# Check
+cargo check
+
+# Lint
+cargo clippy
+
+# Format
+cargo fmt
+
+# Install locally
+cargo install --path .
+```
+
 ## License
 
-MIT
+Licensed under either of:
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## Acknowledgments
+
+Built with:
+- [clap](https://github.com/clap-rs/clap) - Command line argument parsing
+- [argon2](https://github.com/RustCrypto/password-hashes) - Key derivation
+- [aes-gcm](https://github.com/RustCrypto/AEADs) - Authenticated encryption
+- [keyring](https://github.com/hwchen/keyring-rs) - System keyring access
+- [totp-lite](https://github.com/fosskers/totp-lite) - TOTP implementation
