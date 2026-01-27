@@ -45,5 +45,9 @@ fn main() -> Result<()> {
         Commands::Totp { subcommand } => {
             handlers::totp::handle_totp(subcommand, &keyring, &config_dir)
         }
+        Commands::Provider { subcommand } => {
+            let ctx = context::VaultContext::load(&keyring, &config_dir)?;
+            handlers::provider::handle_provider(&ctx, &subcommand)
+        }
     }
 }

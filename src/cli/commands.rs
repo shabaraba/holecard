@@ -104,6 +104,12 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: TotpCommands,
     },
+
+    #[command(about = "Manage secret providers (GitHub, Cloudflare, etc.)")]
+    Provider {
+        #[command(subcommand)]
+        subcommand: ProviderCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -118,6 +124,60 @@ pub enum ConfigCommands {
     SessionTimeout {
         #[arg(help = "Timeout in minutes")]
         minutes: u64,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ProviderCommands {
+    #[command(about = "Add a new provider configuration")]
+    Add {
+        #[arg(help = "Provider type (github, cloudflare)")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID (e.g., my-repo, my-worker)")]
+        provider_id: String,
+
+        #[arg(short, long, value_parser = parse_field, help = "Provider credential (key=value)")]
+        cred: Vec<(String, String)>,
+    },
+
+    #[command(about = "Push secret(s) to provider")]
+    Push {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+
+        #[arg(help = "Entry name or entry.field (e.g., myapp.db_url)")]
+        entry_field: String,
+
+        #[arg(long, help = "Override secret name in provider")]
+        as_name: Option<String>,
+
+        #[arg(long, help = "Push all fields from entry as separate secrets")]
+        expand: bool,
+    },
+
+    #[command(about = "List all configured providers")]
+    List,
+
+    #[command(about = "List secrets in a provider")]
+    Secrets {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
+    },
+
+    #[command(about = "Remove a provider configuration")]
+    Rm {
+        #[arg(help = "Provider type")]
+        provider_type: String,
+
+        #[arg(help = "Provider ID")]
+        provider_id: String,
     },
 }
 
