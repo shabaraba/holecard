@@ -19,9 +19,31 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Init => handlers::vault::handle_init(&keyring, &config_dir),
         Commands::Entry { subcommand } => match subcommand {
-            EntryCommands::Add { name, field } => {
-                handlers::vault::handle_add(name, field, &keyring, &config_dir)
-            }
+            EntryCommands::Add {
+                name,
+                field,
+                generate,
+                gen_length,
+                gen_memorable,
+                gen_words,
+                gen_no_uppercase,
+                gen_no_lowercase,
+                gen_no_digits,
+                gen_no_symbols,
+            } => handlers::vault::handle_add(
+                name,
+                field,
+                generate,
+                gen_length,
+                gen_memorable,
+                gen_words,
+                gen_no_uppercase,
+                gen_no_lowercase,
+                gen_no_digits,
+                gen_no_symbols,
+                &keyring,
+                &config_dir,
+            ),
             EntryCommands::Get {
                 name,
                 clip,
@@ -67,5 +89,24 @@ fn main() -> Result<()> {
             let ctx = context::VaultContext::load(&keyring, &config_dir)?;
             handlers::provider::handle_provider(&ctx, &subcommand)
         }
+        Commands::Generate {
+            length,
+            memorable,
+            words,
+            no_uppercase,
+            no_lowercase,
+            no_digits,
+            no_symbols,
+            clip,
+        } => handlers::password::handle_generate(
+            length,
+            memorable,
+            words,
+            no_uppercase,
+            no_lowercase,
+            no_digits,
+            no_symbols,
+            clip,
+        ),
     }
 }

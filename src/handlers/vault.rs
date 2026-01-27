@@ -1,14 +1,12 @@
 use anyhow::{Context, Result};
-use copypasta::{ClipboardContext, ClipboardProvider};
 use std::collections::HashMap;
 use std::path::Path;
-use std::thread;
-use std::time::Duration;
 
 use crate::cli::input;
 use crate::config::Config;
 use crate::context::VaultContext;
-use crate::domain::{CryptoService, Entry, Vault};
+use crate::domain::{CryptoService, Entry, PasswordService, Vault};
+use crate::handlers::password::copy_to_clipboard_with_clear;
 use crate::infrastructure::{CryptoServiceImpl, KeyringManager, SessionManager, VaultStorage};
 
 pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
@@ -87,9 +85,18 @@ pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn handle_add(
     name: Option<String>,
     fields: Vec<(String, String)>,
+    generate: bool,
+    gen_length: Option<usize>,
+    gen_memorable: bool,
+    gen_words: Option<usize>,
+    gen_no_uppercase: bool,
+    gen_no_lowercase: bool,
+    gen_no_digits: bool,
+    gen_no_symbols: bool,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -97,11 +104,26 @@ pub fn handle_add(
 
     let entry_name = name.unwrap_or_else(|| input::prompt_entry_name().unwrap());
 
-    let custom_fields = if fields.is_empty() {
+    let mut custom_fields: HashMap<String, String> = if fields.is_empty() {
         input::prompt_custom_fields()?
     } else {
         fields.into_iter().collect()
     };
+
+    if generate {
+        let password = PasswordService::generate_from_cli(
+            gen_memorable,
+            gen_words,
+            gen_length,
+            gen_no_uppercase,
+            gen_no_lowercase,
+            gen_no_digits,
+            gen_no_symbols,
+        )?;
+
+        custom_fields.insert("password".to_string(), password);
+        println!("Generated password for 'password' field (hidden)");
+    }
 
     let notes = input::prompt_notes()?;
 
@@ -112,7 +134,7 @@ pub fn handle_add(
 
     ctx.save()?;
 
-    println!("✓ Entry '{}' added successfully!", entry_name);
+    println!("Entry '{}' added successfully!", entry_name);
     Ok(())
 }
 
@@ -181,19 +203,8 @@ pub fn handle_get(
             }
         };
 
-        let mut ctx = ClipboardContext::new()
-            .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard: {:?}", e))?;
-        ctx.set_contents(value_to_copy.clone())
-            .map_err(|e| anyhow::anyhow!("Failed to copy to clipboard: {:?}", e))?;
-
-        println!("\n✓ Copied to clipboard (will clear in 30 seconds)");
-
-        thread::spawn(move || {
-            thread::sleep(Duration::from_secs(30));
-            if let Ok(mut ctx) = ClipboardContext::new() {
-                let _ = ctx.set_contents(String::new());
-            }
-        });
+        copy_to_clipboard_with_clear(&value_to_copy)?;
+        println!("\nCopied to clipboard (will clear in 30 seconds)");
     }
 
     Ok(())

@@ -1,4 +1,5 @@
 pub mod config;
+pub mod password;
 pub mod provider;
 pub mod session;
 pub mod template;
