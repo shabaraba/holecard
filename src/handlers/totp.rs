@@ -1,0 +1,122 @@
+use anyhow::Result;
+use copypasta::{ClipboardContext, ClipboardProvider};
+use std::path::PathBuf;
+use std::thread;
+use std::time::Duration;
+
+use crate::cli::commands::TotpCommands;
+use crate::context::VaultContext;
+use crate::domain::TotpService;
+use crate::infrastructure::KeyringManager;
+
+pub fn handle_totp(
+    subcommand: TotpCommands,
+    keyring: &KeyringManager,
+    config_dir: &PathBuf,
+) -> Result<()> {
+    match subcommand {
+        TotpCommands::Add { entry, secret } => {
+            handle_totp_add(&entry, &secret, keyring, config_dir)
+        }
+        TotpCommands::Get { entry } => handle_totp_get(&entry, keyring, config_dir),
+        TotpCommands::Rm { entry } => handle_totp_rm(&entry, keyring, config_dir),
+    }
+}
+
+fn handle_totp_add(
+    service_name: &str,
+    secret: &str,
+    keyring: &KeyringManager,
+    config_dir: &PathBuf,
+) -> Result<()> {
+    let mut ctx = VaultContext::load(keyring, config_dir)?;
+
+    let totp_entry = ctx.vault.get_entry_mut("totp").map_err(|_| {
+        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+    })?;
+
+    if totp_entry.custom_fields.contains_key(service_name) {
+        println!(
+            "⚠ TOTP secret for '{}' already exists. Overwriting...",
+            service_name
+        );
+    }
+
+    totp_entry
+        .custom_fields
+        .insert(service_name.to_string(), secret.to_string());
+    totp_entry.updated_at = chrono::Utc::now();
+
+    ctx.save()?;
+    println!("✓ TOTP secret for '{}' added", service_name);
+
+    Ok(())
+}
+
+fn handle_totp_get(
+    service_name: &str,
+    keyring: &KeyringManager,
+    config_dir: &PathBuf,
+) -> Result<()> {
+    let ctx = VaultContext::load(keyring, config_dir)?;
+    let totp_entry = ctx.vault.get_entry("totp").map_err(|_| {
+        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+    })?;
+
+    if let Some(secret) = totp_entry.custom_fields.get(service_name) {
+        if secret.is_empty() {
+            anyhow::bail!("TOTP secret for '{}' is empty", service_name);
+        }
+
+        match TotpService::generate_code(secret) {
+            Ok(code) => {
+                let remaining = TotpService::get_remaining_seconds();
+                println!("\nTOTP Code: {} (valid for {} seconds)", code, remaining);
+
+                let mut clipboard_ctx = ClipboardContext::new()
+                    .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard: {:?}", e))?;
+                clipboard_ctx
+                    .set_contents(code.clone())
+                    .map_err(|e| anyhow::anyhow!("Failed to copy to clipboard: {:?}", e))?;
+
+                println!("✓ Copied to clipboard (will clear in 30 seconds)");
+
+                thread::spawn(move || {
+                    thread::sleep(Duration::from_secs(30));
+                    if let Ok(mut ctx) = ClipboardContext::new() {
+                        let _ = ctx.set_contents(String::new());
+                    }
+                });
+            }
+            Err(e) => {
+                anyhow::bail!("Failed to generate TOTP code: {}", e);
+            }
+        }
+    } else {
+        anyhow::bail!("No TOTP secret found for service '{}'", service_name);
+    }
+
+    Ok(())
+}
+
+fn handle_totp_rm(
+    service_name: &str,
+    keyring: &KeyringManager,
+    config_dir: &PathBuf,
+) -> Result<()> {
+    let mut ctx = VaultContext::load(keyring, config_dir)?;
+
+    let totp_entry = ctx.vault.get_entry_mut("totp").map_err(|_| {
+        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+    })?;
+
+    if totp_entry.custom_fields.remove(service_name).is_some() {
+        totp_entry.updated_at = chrono::Utc::now();
+        ctx.save()?;
+        println!("✓ TOTP secret for '{}' removed", service_name);
+    } else {
+        println!("⚠ No TOTP secret found for service '{}'", service_name);
+    }
+
+    Ok(())
+}

@@ -51,11 +51,19 @@ The project follows a layered architecture with clear separation of concerns:
 
 ```
 src/
-├── main.rs              # CLI entry point and command handlers
+├── main.rs              # CLI entry point (41 lines - routing only)
+├── context.rs           # VaultContext (application state management)
 ├── config.rs            # Configuration management (~/.holecard/config.toml)
 ├── cli/
 │   ├── commands.rs      # Clap command definitions
 │   └── input.rs         # Interactive input prompts
+├── handlers/            # Application layer - command handlers
+│   ├── vault.rs         # Vault operations (init, add, get, list, edit, rm)
+│   ├── session.rs       # Session management (lock, status)
+│   ├── config.rs        # Configuration commands
+│   ├── template.rs      # Template operations (inject, run)
+│   ├── transfer.rs      # Import/export operations
+│   └── totp.rs          # TOTP operations
 ├── domain/              # Core business logic (no I/O dependencies)
 │   ├── crypto.rs        # CryptoService trait definition
 │   ├── vault.rs         # Vault data structure (entries HashMap)
@@ -72,6 +80,8 @@ src/
 
 ### Key Design Patterns
 
+- **Layered architecture**: main.rs → handlers → context → domain + infrastructure
+- **Single responsibility**: Each handler module groups related commands (vault ops, session ops, etc.)
 - **Trait-based crypto abstraction**: `CryptoService` trait in domain, `CryptoServiceImpl` in infrastructure
 - **Session caching**: Derived key cached in system keyring with configurable timeout to avoid repeated password entry
 - **Dual-key encryption**: Master password + secret key combined before key derivation for additional security
