@@ -56,7 +56,7 @@ pub enum Commands {
         #[arg(short, long, value_parser = parse_field, help = "Add or update field (key=value)")]
         field: Vec<(String, String)>,
 
-        #[arg(long, help = "Remove field by key")]
+        #[arg(short = 'd', long = "rm-field", help = "Remove field by key")]
         rm_field: Vec<String>,
     },
 
@@ -143,14 +143,8 @@ pub enum ConfigCommands {
 pub enum ProviderCommands {
     #[command(about = "Add a new provider configuration")]
     Add {
-        #[arg(help = "Provider type (github, cloudflare)")]
-        provider_type: String,
-
-        #[arg(help = "Provider ID (e.g., my-repo, my-worker)")]
-        provider_id: String,
-
-        #[arg(short, long, value_parser = parse_field, help = "Provider credential (key=value)")]
-        cred: Vec<(String, String)>,
+        #[command(subcommand)]
+        provider: ProviderAddCommands,
     },
 
     #[command(about = "Push secret(s) to provider")]
@@ -202,6 +196,36 @@ pub enum ProviderCommands {
 
         #[arg(help = "Provider ID")]
         provider_id: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ProviderAddCommands {
+    #[command(about = "Add GitHub Actions Secrets provider")]
+    Github {
+        #[arg(help = "Provider ID (e.g., my-repo)")]
+        provider_id: String,
+
+        #[arg(long, help = "GitHub repository (owner/repo)")]
+        repo: String,
+
+        #[arg(long, help = "GitHub Personal Access Token")]
+        token: String,
+    },
+
+    #[command(about = "Add Cloudflare Workers Secrets provider")]
+    Cloudflare {
+        #[arg(help = "Provider ID (e.g., my-worker)")]
+        provider_id: String,
+
+        #[arg(long, help = "Cloudflare Account ID")]
+        account_id: String,
+
+        #[arg(long, help = "Worker name")]
+        worker_name: String,
+
+        #[arg(long, help = "Cloudflare API Token")]
+        token: String,
     },
 }
 

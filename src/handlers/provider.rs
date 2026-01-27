@@ -1,4 +1,4 @@
-use crate::cli::commands::ProviderCommands;
+use crate::cli::commands::{ProviderAddCommands, ProviderCommands};
 use crate::context::VaultContext;
 use crate::domain::{error::ProviderError, field_to_secret_name, ProviderConfig};
 use crate::infrastructure::{create_provider, CryptoServiceImpl, ProviderStorage};
@@ -8,11 +8,7 @@ use std::collections::HashMap;
 
 pub fn handle_provider(ctx: &VaultContext, subcommand: &ProviderCommands) -> Result<()> {
     match subcommand {
-        ProviderCommands::Add {
-            provider_type,
-            provider_id,
-            cred,
-        } => handle_add(ctx, provider_type, provider_id, cred),
+        ProviderCommands::Add { provider } => handle_add(ctx, provider),
         ProviderCommands::Push {
             provider_type,
             provider_id,
@@ -59,12 +55,32 @@ fn make_provider_key(provider_type: &str, provider_id: &str) -> String {
     format!("{}:{}", provider_type, provider_id)
 }
 
-fn handle_add(
-    ctx: &VaultContext,
-    provider_type: &str,
-    provider_id: &str,
-    creds: &[(String, String)],
-) -> Result<()> {
+fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> {
+    let (provider_type, provider_id, credentials) = match provider {
+        ProviderAddCommands::Github {
+            provider_id,
+            repo,
+            token,
+        } => {
+            let mut creds = HashMap::new();
+            creds.insert("repo".to_string(), repo.clone());
+            creds.insert("token".to_string(), token.clone());
+            ("github", provider_id, creds)
+        }
+        ProviderAddCommands::Cloudflare {
+            provider_id,
+            account_id,
+            worker_name,
+            token,
+        } => {
+            let mut creds = HashMap::new();
+            creds.insert("account_id".to_string(), account_id.clone());
+            creds.insert("worker_name".to_string(), worker_name.clone());
+            creds.insert("token".to_string(), token.clone());
+            ("cloudflare", provider_id, creds)
+        }
+    };
+
     let mut configs = load_providers(ctx)?;
     let key = make_provider_key(provider_type, provider_id);
 
@@ -74,26 +90,6 @@ fn handle_add(
             provider_id.to_string(),
         )
         .into());
-    }
-
-    let credentials: HashMap<String, String> = creds.iter().cloned().collect();
-
-    let required = match provider_type {
-        "github" => vec!["repo", "token"],
-        "cloudflare" => vec!["account_id", "worker_name", "token"],
-        _ => {
-            return Err(ProviderError::ConfigError(format!(
-                "Unknown provider type: {}",
-                provider_type
-            ))
-            .into())
-        }
-    };
-
-    for req in &required {
-        if !credentials.contains_key(*req) {
-            return Err(ProviderError::ConfigError(format!("Missing credential: {}", req)).into());
-        }
     }
 
     let config = ProviderConfig {

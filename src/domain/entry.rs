@@ -27,11 +27,6 @@ impl Entry {
         }
     }
 
-    pub fn update_fields(&mut self, custom_fields: HashMap<String, String>) {
-        self.custom_fields = custom_fields;
-        self.updated_at = Utc::now();
-    }
-
     pub fn update_notes(&mut self, notes: Option<String>) {
         self.notes = notes;
         self.updated_at = Utc::now();
