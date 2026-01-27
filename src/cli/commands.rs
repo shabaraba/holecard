@@ -75,6 +75,33 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: ProviderCommands,
     },
+
+    #[command(about = "Generate a secure password")]
+    Generate {
+        #[arg(short, long, help = "Password length (default: 20)")]
+        length: Option<usize>,
+
+        #[arg(short, long, help = "Generate memorable passphrase")]
+        memorable: bool,
+
+        #[arg(short, long, help = "Number of words in passphrase (default: 4)")]
+        words: Option<usize>,
+
+        #[arg(long, help = "Exclude uppercase letters")]
+        no_uppercase: bool,
+
+        #[arg(long, help = "Exclude lowercase letters")]
+        no_lowercase: bool,
+
+        #[arg(long, help = "Exclude digits")]
+        no_digits: bool,
+
+        #[arg(long, help = "Exclude symbols")]
+        no_symbols: bool,
+
+        #[arg(short, long, help = "Copy to clipboard")]
+        clip: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -86,6 +113,30 @@ pub enum EntryCommands {
 
         #[arg(short, long, value_parser = parse_field, help = "Custom field (key=value)")]
         field: Vec<(String, String)>,
+
+        #[arg(short, long, help = "Generate random password for 'password' field")]
+        generate: bool,
+
+        #[arg(long, help = "Generated password length (default: 20)")]
+        gen_length: Option<usize>,
+
+        #[arg(short = 'm', long, help = "Generate memorable passphrase")]
+        gen_memorable: bool,
+
+        #[arg(short = 'w', long, help = "Number of words in passphrase (default: 4)")]
+        gen_words: Option<usize>,
+
+        #[arg(long, help = "Exclude uppercase from generated password")]
+        gen_no_uppercase: bool,
+
+        #[arg(long, help = "Exclude lowercase from generated password")]
+        gen_no_lowercase: bool,
+
+        #[arg(long, help = "Exclude digits from generated password")]
+        gen_no_digits: bool,
+
+        #[arg(long, help = "Exclude symbols from generated password")]
+        gen_no_symbols: bool,
     },
 
     #[command(about = "Get an entry")]
