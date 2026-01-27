@@ -1,4 +1,4 @@
-use crate::domain::Entry;
+use crate::domain::{Entry, Vault};
 use anyhow::{Context, Result};
 use regex::Regex;
 
@@ -65,6 +65,35 @@ impl TemplateEngine {
             .map(|(k, v)| format!("{}={}", k.to_uppercase(), v))
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    /// Resolve a template string that may contain {{entry_name.field}} references
+    /// Returns the resolved value or the original string if not a template
+    pub fn resolve_value(value: &str, vault: &Vault) -> Result<String> {
+        let re = Regex::new(r"^\{\{([^.]+)\.([^}]+)\}\}$").context("Failed to compile regex")?;
+
+        if let Some(cap) = re.captures(value) {
+            let entry_name = cap[1].trim();
+            let field_name = cap[2].trim();
+
+            let entry = vault
+                .get_entry(entry_name)
+                .with_context(|| format!("Entry '{}' not found in vault", entry_name))?;
+
+            entry
+                .custom_fields
+                .get(field_name)
+                .cloned()
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Field '{}' not found in entry '{}'",
+                        field_name,
+                        entry_name
+                    )
+                })
+        } else {
+            Ok(value.to_string())
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::cli::commands::{ProviderAddCommands, ProviderCommands};
 use crate::context::VaultContext;
-use crate::domain::{error::ProviderError, field_to_secret_name, ProviderConfig};
+use crate::domain::{error::ProviderError, field_to_secret_name, ProviderConfig, TemplateEngine};
 use crate::infrastructure::{create_provider, CryptoServiceImpl, ProviderStorage};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
@@ -63,8 +63,8 @@ fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> 
             token,
         } => {
             let mut creds = HashMap::new();
-            creds.insert("repo".to_string(), repo.clone());
-            creds.insert("token".to_string(), token.clone());
+            creds.insert("repo".to_string(), TemplateEngine::resolve_value(repo, &ctx.vault)?);
+            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
             ("github", provider_id, creds)
         }
         ProviderAddCommands::Cloudflare {
@@ -74,9 +74,9 @@ fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> 
             token,
         } => {
             let mut creds = HashMap::new();
-            creds.insert("account_id".to_string(), account_id.clone());
-            creds.insert("worker_name".to_string(), worker_name.clone());
-            creds.insert("token".to_string(), token.clone());
+            creds.insert("account_id".to_string(), TemplateEngine::resolve_value(account_id, &ctx.vault)?);
+            creds.insert("worker_name".to_string(), TemplateEngine::resolve_value(worker_name, &ctx.vault)?);
+            creds.insert("token".to_string(), TemplateEngine::resolve_value(token, &ctx.vault)?);
             ("cloudflare", provider_id, creds)
         }
     };
