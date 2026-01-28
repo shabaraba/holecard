@@ -2,18 +2,20 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::process::Command;
 
-use crate::context::VaultContext;
 use crate::domain::TemplateEngine;
 use crate::infrastructure::KeyringManager;
+use crate::multi_vault_context::MultiVaultContext;
 
 pub fn handle_inject(
     entry_name: &str,
     template: &str,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = VaultContext::load(keyring, config_dir)?;
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
     let entry = ctx
+        .inner
         .vault
         .get_entry(entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -27,6 +29,7 @@ pub fn handle_inject(
 pub fn handle_run(
     entry_name: &str,
     command: &[String],
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -34,8 +37,9 @@ pub fn handle_run(
         anyhow::bail!("No command specified");
     }
 
-    let ctx = VaultContext::load(keyring, config_dir)?;
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
     let entry = ctx
+        .inner
         .vault
         .get_entry(entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;

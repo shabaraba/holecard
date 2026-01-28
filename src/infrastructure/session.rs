@@ -6,7 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const SERVICE_NAME: &str = "hc-session";
+const SERVICE_NAME_PREFIX: &str = "hc-session";
 const DERIVED_KEY_USER: &str = "derived_key";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -22,14 +22,16 @@ pub struct SessionData {
 }
 
 pub struct SessionManager {
+    service_name: String,
     session_file: PathBuf,
     timeout_minutes: u64,
 }
 
 impl SessionManager {
-    pub fn new(config_dir: &Path, timeout_minutes: u64) -> Self {
+    pub fn new(config_dir: &Path, vault_name: &str, timeout_minutes: u64) -> Self {
         Self {
-            session_file: config_dir.join("session.json"),
+            service_name: format!("{}-{}", SERVICE_NAME_PREFIX, vault_name),
+            session_file: config_dir.join(format!("session_{}.json", vault_name)),
             timeout_minutes,
         }
     }
@@ -39,7 +41,7 @@ impl SessionManager {
         let encoded_salt = BASE64.encode(salt);
         let now = current_timestamp();
 
-        match Entry::new(SERVICE_NAME, DERIVED_KEY_USER) {
+        match Entry::new(&self.service_name, DERIVED_KEY_USER) {
             Ok(entry) => {
                 entry
                     .set_password(&encoded_key)
@@ -79,7 +81,7 @@ impl SessionManager {
             return Ok(None);
         }
 
-        let encoded_key = match Entry::new(SERVICE_NAME, DERIVED_KEY_USER) {
+        let encoded_key = match Entry::new(&self.service_name, DERIVED_KEY_USER) {
             Ok(entry) => match entry.get_password() {
                 Ok(key) => key,
                 Err(_) => return Ok(None),
@@ -112,7 +114,7 @@ impl SessionManager {
     }
 
     pub fn clear_session(&self) -> Result<()> {
-        if let Ok(entry) = Entry::new(SERVICE_NAME, DERIVED_KEY_USER) {
+        if let Ok(entry) = Entry::new(&self.service_name, DERIVED_KEY_USER) {
             let _ = entry.delete_password();
         }
 
