@@ -63,6 +63,7 @@ impl KeyringManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn delete_secret_key(&self) -> Result<()> {
         if let Ok(entry) = Entry::new(SERVICE_NAME, USERNAME) {
             let _ = entry.delete_password();

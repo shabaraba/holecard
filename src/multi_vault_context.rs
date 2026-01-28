@@ -24,12 +24,7 @@ impl MultiVaultContext {
         };
 
         let vault_path = &vault_metadata.path;
-        let inner = VaultContext::load(
-            vault_path,
-            &vault_metadata.name,
-            keyring,
-            config_dir,
-        )?;
+        let inner = VaultContext::load(vault_path, &vault_metadata.name, keyring, config_dir)?;
 
         registry.touch_vault(&vault_metadata.name)?;
 

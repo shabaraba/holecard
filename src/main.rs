@@ -52,7 +52,15 @@ fn main() -> Result<()> {
                 clip,
                 totp,
                 show,
-            } => handlers::vault::handle_get(&name, clip, totp, show, vault_name, &keyring, &config_dir),
+            } => handlers::vault::handle_get(
+                &name,
+                clip,
+                totp,
+                show,
+                vault_name,
+                &keyring,
+                &config_dir,
+            ),
             EntryCommands::List => handlers::vault::handle_list(vault_name, &keyring, &config_dir),
             EntryCommands::Edit {
                 name,
@@ -61,9 +69,21 @@ fn main() -> Result<()> {
                 rm_field,
             } => {
                 if interactive {
-                    handlers::vault::handle_edit_interactive(&name, vault_name, &keyring, &config_dir)
+                    handlers::vault::handle_edit_interactive(
+                        &name,
+                        vault_name,
+                        &keyring,
+                        &config_dir,
+                    )
                 } else {
-                    handlers::vault::handle_edit(&name, field, rm_field, vault_name, &keyring, &config_dir)
+                    handlers::vault::handle_edit(
+                        &name,
+                        field,
+                        rm_field,
+                        vault_name,
+                        &keyring,
+                        &config_dir,
+                    )
                 }
             }
             EntryCommands::Remove { name } => {
@@ -89,7 +109,8 @@ fn main() -> Result<()> {
             handlers::totp::handle_totp(subcommand, vault_name, &keyring, &config_dir)
         }
         Commands::Provider { subcommand } => {
-            let ctx = multi_vault_context::MultiVaultContext::load(vault_name, &keyring, &config_dir)?;
+            let ctx =
+                multi_vault_context::MultiVaultContext::load(vault_name, &keyring, &config_dir)?;
             handlers::provider::handle_provider(&ctx.inner, &subcommand)
         }
         Commands::Generate {

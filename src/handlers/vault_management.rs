@@ -126,8 +126,10 @@ fn handle_delete(name: String, force: bool, config_dir: &Path) -> Result<()> {
     }
 
     if vault.path.exists() {
-        std::fs::remove_file(&vault.path)
-            .context(format!("Failed to delete vault file: {}", vault.path.display()))?;
+        std::fs::remove_file(&vault.path).context(format!(
+            "Failed to delete vault file: {}",
+            vault.path.display()
+        ))?;
     }
 
     let config = Config::load(config_dir)?;

@@ -151,7 +151,11 @@ pub fn handle_get(
     Ok(())
 }
 
-pub fn handle_list(vault_name: Option<&str>, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
+pub fn handle_list(
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
     let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
     let entries = ctx.inner.vault.list_entries();
 
@@ -271,7 +275,12 @@ pub fn handle_edit_interactive(
     Ok(())
 }
 
-pub fn handle_rm(name: &str, vault_name: Option<&str>, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
+pub fn handle_rm(
+    name: &str,
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
     let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
     ctx.inner

@@ -65,18 +65,17 @@ impl VaultRegistry {
             });
         }
 
-        let content = fs::read_to_string(self.registry_path())
-            .context("Failed to read vaults.toml")?;
+        let content =
+            fs::read_to_string(self.registry_path()).context("Failed to read vaults.toml")?;
 
         toml::from_str(&content).context("Failed to parse vaults.toml")
     }
 
     fn save_config(&self, config: &VaultsConfig) -> Result<()> {
-        let content = toml::to_string_pretty(config)
-            .context("Failed to serialize vaults config")?;
+        let content =
+            toml::to_string_pretty(config).context("Failed to serialize vaults config")?;
 
-        fs::write(self.registry_path(), content)
-            .context("Failed to write vaults.toml")?;
+        fs::write(self.registry_path(), content).context("Failed to write vaults.toml")?;
         Ok(())
     }
 
@@ -109,7 +108,9 @@ impl VaultRegistry {
         }
 
         if config.active_vault == name {
-            config.active_vault = config.vaults.first()
+            config.active_vault = config
+                .vaults
+                .first()
                 .map(|v| v.name.clone())
                 .unwrap_or_default();
         }
@@ -133,7 +134,8 @@ impl VaultRegistry {
     pub fn get_vault(&self, name: &str) -> Result<VaultMetadata> {
         let config = self.load_config()?;
 
-        config.vaults
+        config
+            .vaults
             .into_iter()
             .find(|v| v.name == name)
             .ok_or_else(|| anyhow::anyhow!("Vault '{}' not found", name))

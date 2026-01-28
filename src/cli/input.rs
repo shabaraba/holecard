@@ -76,6 +76,7 @@ pub fn prompt_notes() -> Result<Option<String>> {
     }
 }
 
+#[allow(dead_code)]
 pub fn prompt_confirm_reinit() -> Result<bool> {
     Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt("⚠ Vault already exists. Reinitialize? This will DELETE ALL existing data!")

@@ -9,7 +9,11 @@ pub fn handle_lock(config_dir: &Path) -> Result<()> {
     let registry = VaultRegistry::load(config_dir)?;
 
     let active_vault = registry.get_active_vault()?;
-    let session = SessionManager::new(config_dir, &active_vault.name, config.session_timeout_minutes);
+    let session = SessionManager::new(
+        config_dir,
+        &active_vault.name,
+        config.session_timeout_minutes,
+    );
 
     session.clear_session()?;
     println!("✓ Vault '{}' locked. Session cleared.", active_vault.name);
@@ -22,10 +26,17 @@ pub fn handle_status(config_dir: &Path) -> Result<()> {
     let registry = VaultRegistry::load(config_dir)?;
 
     let active_vault = registry.get_active_vault()?;
-    let session = SessionManager::new(config_dir, &active_vault.name, config.session_timeout_minutes);
+    let session = SessionManager::new(
+        config_dir,
+        &active_vault.name,
+        config.session_timeout_minutes,
+    );
 
     if session.is_active() {
-        println!("🔓 Vault '{}' is unlocked (session active)", active_vault.name);
+        println!(
+            "🔓 Vault '{}' is unlocked (session active)",
+            active_vault.name
+        );
         println!(
             "   Session timeout: {} minutes",
             config.session_timeout_minutes
