@@ -2,6 +2,7 @@ pub mod config;
 pub mod password;
 pub mod provider;
 pub mod session;
+pub mod ssh;
 pub mod template;
 pub mod totp;
 pub mod transfer;

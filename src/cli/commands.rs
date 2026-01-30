@@ -111,6 +111,12 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: VaultCommands,
     },
+
+    #[command(about = "Manage SSH keys")]
+    Ssh {
+        #[command(subcommand)]
+        subcommand: SshCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -386,6 +392,27 @@ pub enum VaultCommands {
         #[arg(help = "Target vault name")]
         to_vault: String,
     },
+}
+
+#[derive(Subcommand)]
+pub enum SshCommands {
+    #[command(about = "Load SSH key into ssh-agent")]
+    Load {
+        #[arg(help = "Entry name containing SSH key")]
+        name: String,
+
+        #[arg(long, help = "Lifetime in seconds (0 = forever)")]
+        lifetime: Option<u32>,
+    },
+
+    #[command(about = "Remove SSH key from ssh-agent")]
+    Unload {
+        #[arg(help = "Entry name or public key fingerprint")]
+        name: String,
+    },
+
+    #[command(about = "List loaded SSH keys in ssh-agent")]
+    List,
 }
 
 fn parse_field(s: &str) -> Result<(String, String), String> {
