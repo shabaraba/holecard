@@ -1,5 +1,7 @@
 use anyhow::{bail, Result};
 
+use crate::domain::vault::Vault;
+
 const KEY_FORMATS: &[(&str, SshKeyType)] = &[
     ("OPENSSH PRIVATE KEY", SshKeyType::OpenSsh),
     ("RSA PRIVATE KEY", SshKeyType::Rsa),
@@ -19,6 +21,24 @@ pub fn validate_private_key(key: &str) -> Result<SshKeyType> {
     }
 
     bail!("Invalid SSH private key format. Supported formats: OpenSSH, RSA (PEM), ECDSA, Ed25519");
+}
+
+pub fn find_entry_by_name_or_alias(vault: &Vault, target: &str) -> Option<String> {
+    if vault.get_entry(target).is_ok() {
+        return Some(target.to_string());
+    }
+
+    for entry in vault.list_entries() {
+        if let Some(alias_str) = entry.custom_fields.get("alias") {
+            for alias in alias_str.split(',').map(|s: &str| s.trim()) {
+                if alias == target {
+                    return Some(entry.name.clone());
+                }
+            }
+        }
+    }
+
+    None
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

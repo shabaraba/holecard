@@ -413,6 +413,15 @@ pub enum SshCommands {
 
     #[command(about = "List loaded SSH keys in ssh-agent")]
     List,
+
+    #[command(about = "Connect to SSH host (auto-loads key from entry)")]
+    Connect {
+        #[arg(help = "Entry name or alias (e.g., git@github.com)")]
+        target: String,
+
+        #[arg(last = true, help = "Additional SSH arguments")]
+        ssh_args: Vec<String>,
+    },
 }
 
 fn parse_field(s: &str) -> Result<(String, String), String> {

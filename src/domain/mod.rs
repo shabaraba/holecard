@@ -16,7 +16,7 @@ pub use error::CryptoError;
 pub use error::VaultError;
 pub use password_gen::PasswordService;
 pub use provider::{field_to_secret_name, ProviderConfig};
-pub use ssh_key::validate_private_key;
+pub use ssh_key::{find_entry_by_name_or_alias, validate_private_key};
 pub use template::TemplateEngine;
 pub use totp::TotpService;
 pub use vault::Vault;
