@@ -4,6 +4,9 @@ use clap::{Parser, Subcommand};
 #[command(name = "hc")]
 #[command(about = "Secure password manager CLI", long_about = None)]
 pub struct Cli {
+    #[arg(long, global = true, help = "Vault name to use")]
+    pub vault: Option<String>,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -101,6 +104,12 @@ pub enum Commands {
 
         #[arg(short, long, help = "Copy to clipboard")]
         clip: bool,
+    },
+
+    #[command(about = "Manage vaults")]
+    Vault {
+        #[command(subcommand)]
+        subcommand: VaultCommands,
     },
 }
 
@@ -331,6 +340,51 @@ pub enum TotpCommands {
     Rm {
         #[arg(help = "Entry name")]
         entry: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum VaultCommands {
+    #[command(about = "List all vaults")]
+    List,
+
+    #[command(about = "Create a new vault")]
+    Create {
+        #[arg(help = "Vault name")]
+        name: String,
+    },
+
+    #[command(about = "Delete a vault")]
+    Delete {
+        #[arg(help = "Vault name")]
+        name: String,
+
+        #[arg(long, help = "Skip confirmation")]
+        force: bool,
+    },
+
+    #[command(about = "Set active vault")]
+    Use {
+        #[arg(help = "Vault name")]
+        name: String,
+    },
+
+    #[command(about = "Move entry to another vault")]
+    Move {
+        #[arg(help = "Entry name")]
+        entry: String,
+
+        #[arg(help = "Target vault name")]
+        to_vault: String,
+    },
+
+    #[command(about = "Copy entry to another vault")]
+    Copy {
+        #[arg(help = "Entry name")]
+        entry: String,
+
+        #[arg(help = "Target vault name")]
+        to_vault: String,
     },
 }
 

@@ -6,3 +6,4 @@ pub mod template;
 pub mod totp;
 pub mod transfer;
 pub mod vault;
+pub mod vault_management;

@@ -14,29 +14,36 @@ pub struct VaultContext {
     pub session_data: SessionData,
     pub config: Config,
     pub config_dir: PathBuf,
+    vault_path: PathBuf,
+    vault_name: String,
 }
 
 impl VaultContext {
-    pub fn load(keyring: &KeyringManager, config_dir: &Path) -> Result<Self> {
+    pub fn load(
+        vault_path: &Path,
+        vault_name: &str,
+        keyring: &KeyringManager,
+        config_dir: &Path,
+    ) -> Result<Self> {
         let secret_key = keyring.load_secret_key()?;
         let config = Config::load(config_dir)?;
         let crypto = CryptoServiceImpl::new();
         let storage = VaultStorage::new(crypto);
-        let session = SessionManager::new(config_dir, config.session_timeout_minutes);
+        let session = SessionManager::new(config_dir, vault_name, config.session_timeout_minutes);
 
         let (vault, session_data) = if let Some(cached) = session.load_session()? {
             let vault = storage
-                .load_with_cached_key(&config.vault_path, &cached.derived_key)
+                .load_with_cached_key(vault_path, &cached.derived_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
             (vault, cached)
         } else {
             let master_password = input::prompt_master_password()?;
             let (derived_key, salt) = storage
-                .derive_key_from_vault(&config.vault_path, &master_password, &secret_key)
+                .derive_key_from_vault(vault_path, &master_password, &secret_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
             let vault = storage
-                .load_with_cached_key(&config.vault_path, &derived_key)
+                .load_with_cached_key(vault_path, &derived_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
             let session_data = SessionData { derived_key, salt };
@@ -50,6 +57,8 @@ impl VaultContext {
             session_data,
             config,
             config_dir: config_dir.to_path_buf(),
+            vault_path: vault_path.to_path_buf(),
+            vault_name: vault_name.to_string(),
         })
     }
 
@@ -57,13 +66,17 @@ impl VaultContext {
         self.storage
             .save_with_cached_key(
                 &self.vault,
-                &self.config.vault_path,
+                &self.vault_path,
                 &self.session_data.derived_key,
                 &self.session_data.salt,
             )
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-        let session = SessionManager::new(&self.config_dir, self.config.session_timeout_minutes);
+        let session = SessionManager::new(
+            &self.config_dir,
+            &self.vault_name,
+            self.config.session_timeout_minutes,
+        );
         session.save_session(&self.session_data.derived_key, &self.session_data.salt)?;
 
         Ok(())

@@ -5,33 +5,35 @@ use std::thread;
 use std::time::Duration;
 
 use crate::cli::commands::TotpCommands;
-use crate::context::VaultContext;
 use crate::domain::TotpService;
 use crate::infrastructure::KeyringManager;
+use crate::multi_vault_context::MultiVaultContext;
 
 pub fn handle_totp(
     subcommand: TotpCommands,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
     match subcommand {
         TotpCommands::Add { entry, secret } => {
-            handle_totp_add(&entry, &secret, keyring, config_dir)
+            handle_totp_add(&entry, &secret, vault_name, keyring, config_dir)
         }
-        TotpCommands::Get { entry } => handle_totp_get(&entry, keyring, config_dir),
-        TotpCommands::Rm { entry } => handle_totp_rm(&entry, keyring, config_dir),
+        TotpCommands::Get { entry } => handle_totp_get(&entry, vault_name, keyring, config_dir),
+        TotpCommands::Rm { entry } => handle_totp_rm(&entry, vault_name, keyring, config_dir),
     }
 }
 
 fn handle_totp_add(
     service_name: &str,
     secret: &str,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = VaultContext::load(keyring, config_dir)?;
+    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
-    let totp_entry = ctx.vault.get_entry_mut("totp").map_err(|_| {
+    let totp_entry = ctx.inner.vault.get_entry_mut("totp").map_err(|_| {
         anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
     })?;
 
@@ -53,9 +55,14 @@ fn handle_totp_add(
     Ok(())
 }
 
-fn handle_totp_get(service_name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
-    let ctx = VaultContext::load(keyring, config_dir)?;
-    let totp_entry = ctx.vault.get_entry("totp").map_err(|_| {
+fn handle_totp_get(
+    service_name: &str,
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let totp_entry = ctx.inner.vault.get_entry("totp").map_err(|_| {
         anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
     })?;
 
@@ -95,10 +102,15 @@ fn handle_totp_get(service_name: &str, keyring: &KeyringManager, config_dir: &Pa
     Ok(())
 }
 
-fn handle_totp_rm(service_name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
-    let mut ctx = VaultContext::load(keyring, config_dir)?;
+fn handle_totp_rm(
+    service_name: &str,
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
-    let totp_entry = ctx.vault.get_entry_mut("totp").map_err(|_| {
+    let totp_entry = ctx.inner.vault.get_entry_mut("totp").map_err(|_| {
         anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
     })?;
 

@@ -3,86 +3,23 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::cli::input;
-use crate::config::Config;
-use crate::context::VaultContext;
-use crate::domain::{CryptoService, Entry, PasswordService, Vault};
+use crate::domain::{Entry, PasswordService};
 use crate::handlers::password::copy_to_clipboard_with_clear;
-use crate::infrastructure::{CryptoServiceImpl, KeyringManager, SessionManager, VaultStorage};
+use crate::infrastructure::KeyringManager;
+use crate::multi_vault_context::MultiVaultContext;
 
 pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
-    let secret_key_exists = keyring.load_secret_key().is_ok();
-    let config = Config::load(config_dir)?;
-    let vault_exists = config.vault_path.exists();
+    println!("⚠️  'hc init' is deprecated.");
+    println!("    Use 'hc vault create default' instead.\n");
+    println!("Proceeding with vault creation...\n");
 
-    if secret_key_exists || vault_exists {
-        println!("\n⚠ Vault already exists!");
-        if !input::prompt_confirm_reinit()? {
-            println!("Initialization cancelled.");
-            return Ok(());
-        }
-
-        println!("\n🗑️  Clearing existing vault data...");
-
-        keyring.delete_secret_key()?;
-
-        if vault_exists {
-            std::fs::remove_file(&config.vault_path).context("Failed to delete vault file")?;
-        }
-
-        let session = SessionManager::new(config_dir, config.session_timeout_minutes);
-        session.clear_session()?;
-
-        println!("✓ Existing vault data cleared\n");
-    }
-
-    println!("========================================");
-    println!("     Vault Initialization");
-    println!("========================================");
-    println!("\nPlease set your Master Password.");
-    println!("Requirements:");
-    println!("  • At least 12 characters");
-    println!("  • This will be needed to access your vault");
-    println!("========================================\n");
-
-    let master_password = input::prompt_master_password_confirm()?;
-
-    let crypto = CryptoServiceImpl::new();
-    let secret_key = crypto.generate_secret_key();
-
-    keyring.save_secret_key(&secret_key)?;
-
-    let config = Config::load(config_dir)?;
-    let mut vault = Vault::new();
-    let storage = VaultStorage::new(crypto);
-
-    let totp_entry = Entry::new(
-        "totp".to_string(),
-        HashMap::new(),
-        Some("TOTP secrets storage".to_string()),
-    );
-    vault
-        .add_entry(totp_entry)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
-
-    let (derived_key, salt) = storage
-        .derive_key_from_vault(&config.vault_path, &master_password, &secret_key)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
-
-    storage.save_with_cached_key(&vault, &config.vault_path, &derived_key, &salt)?;
-
-    println!("\n========================================");
-    println!("     Vault Initialization Complete");
-    println!("========================================");
-    println!("\n✓ Master password set");
-    println!("✓ Secret key stored in system keyring");
-    println!("✓ TOTP entry created");
-    println!("\nIMPORTANT:");
-    println!("  • Use 'hc export' regularly to backup your vault");
-    println!("  • Keep your export file and password safe");
-    println!("  • You need BOTH the export file and its password to restore");
-    println!("========================================\n");
-
-    Ok(())
+    crate::handlers::vault_management::handle_vault(
+        crate::cli::commands::VaultCommands::Create {
+            name: "default".to_string(),
+        },
+        keyring,
+        config_dir,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -97,10 +34,11 @@ pub fn handle_add(
     gen_no_lowercase: bool,
     gen_no_digits: bool,
     gen_no_symbols: bool,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = VaultContext::load(keyring, config_dir)?;
+    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
     let entry_name = name.unwrap_or_else(|| input::prompt_entry_name().unwrap());
 
@@ -128,7 +66,8 @@ pub fn handle_add(
     let notes = input::prompt_notes()?;
 
     let entry = Entry::new(entry_name.clone(), custom_fields, notes);
-    ctx.vault
+    ctx.inner
+        .vault
         .add_entry(entry)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
@@ -143,11 +82,13 @@ pub fn handle_get(
     clip: Option<Option<String>>,
     totp: bool,
     show: bool,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = VaultContext::load(keyring, config_dir)?;
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
     let entry = ctx
+        .inner
         .vault
         .get_entry(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -210,9 +151,13 @@ pub fn handle_get(
     Ok(())
 }
 
-pub fn handle_list(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
-    let ctx = VaultContext::load(keyring, config_dir)?;
-    let entries = ctx.vault.list_entries();
+pub fn handle_list(
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let entries = ctx.inner.vault.list_entries();
 
     if entries.is_empty() {
         println!("No entries found.");
@@ -242,12 +187,14 @@ pub fn handle_edit(
     name: &str,
     fields: Vec<(String, String)>,
     rm_fields: Vec<String>,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = VaultContext::load(keyring, config_dir)?;
+    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
     let entry = ctx
+        .inner
         .vault
         .get_entry_mut(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -280,12 +227,14 @@ pub fn handle_edit(
 
 pub fn handle_edit_interactive(
     name: &str,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = VaultContext::load(keyring, config_dir)?;
+    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
     let entry = ctx
+        .inner
         .vault
         .get_entry_mut(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -326,10 +275,16 @@ pub fn handle_edit_interactive(
     Ok(())
 }
 
-pub fn handle_rm(name: &str, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
-    let mut ctx = VaultContext::load(keyring, config_dir)?;
+pub fn handle_rm(
+    name: &str,
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
-    ctx.vault
+    ctx.inner
+        .vault
         .remove_entry(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 

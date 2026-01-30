@@ -4,6 +4,7 @@ mod context;
 mod domain;
 mod handlers;
 mod infrastructure;
+mod multi_vault_context;
 
 use anyhow::Result;
 use clap::Parser;
@@ -15,6 +16,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let config_dir = get_config_dir()?;
     let keyring = KeyringManager::new(config_dir.clone());
+    let vault_name = cli.vault.as_deref();
 
     match cli.command {
         Commands::Init => handlers::vault::handle_init(&keyring, &config_dir),
@@ -41,6 +43,7 @@ fn main() -> Result<()> {
                 gen_no_lowercase,
                 gen_no_digits,
                 gen_no_symbols,
+                vault_name,
                 &keyring,
                 &config_dir,
             ),
@@ -49,8 +52,16 @@ fn main() -> Result<()> {
                 clip,
                 totp,
                 show,
-            } => handlers::vault::handle_get(&name, clip, totp, show, &keyring, &config_dir),
-            EntryCommands::List => handlers::vault::handle_list(&keyring, &config_dir),
+            } => handlers::vault::handle_get(
+                &name,
+                clip,
+                totp,
+                show,
+                vault_name,
+                &keyring,
+                &config_dir,
+            ),
+            EntryCommands::List => handlers::vault::handle_list(vault_name, &keyring, &config_dir),
             EntryCommands::Edit {
                 name,
                 interactive,
@@ -58,36 +69,49 @@ fn main() -> Result<()> {
                 rm_field,
             } => {
                 if interactive {
-                    handlers::vault::handle_edit_interactive(&name, &keyring, &config_dir)
+                    handlers::vault::handle_edit_interactive(
+                        &name,
+                        vault_name,
+                        &keyring,
+                        &config_dir,
+                    )
                 } else {
-                    handlers::vault::handle_edit(&name, field, rm_field, &keyring, &config_dir)
+                    handlers::vault::handle_edit(
+                        &name,
+                        field,
+                        rm_field,
+                        vault_name,
+                        &keyring,
+                        &config_dir,
+                    )
                 }
             }
             EntryCommands::Remove { name } => {
-                handlers::vault::handle_rm(&name, &keyring, &config_dir)
+                handlers::vault::handle_rm(&name, vault_name, &keyring, &config_dir)
             }
         },
         Commands::Config { subcommand } => handlers::config::handle_config(subcommand, &config_dir),
         Commands::Inject { entry, template } => {
-            handlers::template::handle_inject(&entry, &template, &keyring, &config_dir)
+            handlers::template::handle_inject(&entry, &template, vault_name, &keyring, &config_dir)
         }
         Commands::Run { entry, command } => {
-            handlers::template::handle_run(&entry, &command, &keyring, &config_dir)
+            handlers::template::handle_run(&entry, &command, vault_name, &keyring, &config_dir)
         }
         Commands::Lock => handlers::session::handle_lock(&config_dir),
         Commands::Status => handlers::session::handle_status(&config_dir),
         Commands::Export { file } => {
-            handlers::transfer::handle_export(&file, &keyring, &config_dir)
+            handlers::transfer::handle_export(&file, vault_name, &keyring, &config_dir)
         }
         Commands::Import { file, overwrite } => {
-            handlers::transfer::handle_import(&file, overwrite, &keyring, &config_dir)
+            handlers::transfer::handle_import(&file, overwrite, vault_name, &keyring, &config_dir)
         }
         Commands::Totp { subcommand } => {
-            handlers::totp::handle_totp(subcommand, &keyring, &config_dir)
+            handlers::totp::handle_totp(subcommand, vault_name, &keyring, &config_dir)
         }
         Commands::Provider { subcommand } => {
-            let ctx = context::VaultContext::load(&keyring, &config_dir)?;
-            handlers::provider::handle_provider(&ctx, &subcommand)
+            let ctx =
+                multi_vault_context::MultiVaultContext::load(vault_name, &keyring, &config_dir)?;
+            handlers::provider::handle_provider(&ctx.inner, &subcommand)
         }
         Commands::Generate {
             length,
@@ -108,5 +132,8 @@ fn main() -> Result<()> {
             no_symbols,
             clip,
         ),
+        Commands::Vault { subcommand } => {
+            handlers::vault_management::handle_vault(subcommand, &keyring, &config_dir)
+        }
     }
 }
