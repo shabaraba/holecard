@@ -117,26 +117,23 @@ fn handle_ssh_connect(
 
     let entry_name = find_entry_by_name_or_alias(&ctx.inner.vault, target).ok_or_else(|| {
         anyhow::anyhow!(
-            "No entry found with name or alias '{}'. Use 'hc ssh load <entry>' to load a key first.",
+            "No entry found with name or alias '{}'.",
             target
         )
     })?;
 
     let entry = ctx.inner.vault.get_entry(&entry_name)?;
 
-    let private_key = entry
-        .custom_fields
-        .get("private_key")
-        .context("Entry does not contain 'private_key' field")?;
+    if let Some(private_key) = entry.custom_fields.get("private_key") {
+        validate_private_key(private_key)?;
 
-    validate_private_key(private_key)?;
+        let passphrase = entry.custom_fields.get("passphrase").map(|s| s.as_str());
 
-    let passphrase = entry.custom_fields.get("passphrase").map(|s| s.as_str());
+        let agent = SshAgent::connect()?;
+        agent.add_identity(private_key, passphrase, None)?;
 
-    let agent = SshAgent::connect()?;
-    agent.add_identity(private_key, passphrase, None)?;
-
-    println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
+        println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
+    }
 
     let ssh_target = if target.contains('@') {
         target.to_string()
