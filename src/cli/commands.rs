@@ -111,6 +111,12 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: VaultCommands,
     },
+
+    #[command(about = "Manage SSH keys")]
+    Ssh {
+        #[command(subcommand)]
+        subcommand: SshCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -122,6 +128,9 @@ pub enum EntryCommands {
 
         #[arg(short, long, value_parser = parse_field, help = "Custom field (key=value)")]
         field: Vec<(String, String)>,
+
+        #[arg(long, value_parser = parse_file_field, help = "Add field from file (key=path)")]
+        file: Vec<(String, String)>,
 
         #[arg(short, long, help = "Generate random password for 'password' field")]
         generate: bool,
@@ -181,6 +190,9 @@ pub enum EntryCommands {
 
         #[arg(short, long, value_parser = parse_field, help = "Add or update field (key=value)")]
         field: Vec<(String, String)>,
+
+        #[arg(long, value_parser = parse_file_field, help = "Add or update field from file (key=path)")]
+        file: Vec<(String, String)>,
 
         #[arg(short = 'd', long = "rm-field", help = "Remove field by key")]
         rm_field: Vec<String>,
@@ -388,10 +400,65 @@ pub enum VaultCommands {
     },
 }
 
+#[derive(Subcommand)]
+pub enum SshCommands {
+    #[command(about = "Load SSH key into ssh-agent")]
+    Load {
+        #[arg(help = "Entry name containing SSH key")]
+        name: String,
+
+        #[arg(long, help = "Lifetime in seconds (0 = forever)")]
+        lifetime: Option<u32>,
+    },
+
+    #[command(about = "Remove SSH key from ssh-agent")]
+    Unload {
+        #[arg(help = "Entry name or public key fingerprint")]
+        name: String,
+    },
+
+    #[command(about = "List loaded SSH keys in ssh-agent")]
+    List,
+
+    #[command(about = "Connect to SSH host (auto-loads key from entry)")]
+    Connect {
+        #[arg(help = "Entry name or alias (e.g., git@github.com)")]
+        target: String,
+
+        #[arg(last = true, help = "Additional SSH arguments")]
+        ssh_args: Vec<String>,
+    },
+}
+
 fn parse_field(s: &str) -> Result<(String, String), String> {
     let parts: Vec<&str> = s.splitn(2, '=').collect();
     if parts.len() != 2 {
         return Err(format!("Invalid field format: '{}'. Expected key=value", s));
     }
     Ok((parts[0].to_string(), parts[1].to_string()))
+}
+
+fn parse_file_field(s: &str) -> Result<(String, String), String> {
+    let parts: Vec<&str> = s.splitn(2, '=').collect();
+    if parts.len() != 2 {
+        return Err(format!("Invalid field format: '{}'. Expected key=path", s));
+    }
+
+    let key = parts[0].to_string();
+    let path = parts[1];
+
+    let expanded_path = if path.starts_with('~') {
+        path.replacen(
+            '~',
+            &std::env::var("HOME").unwrap_or_else(|_| ".".to_string()),
+            1,
+        )
+    } else {
+        path.to_string()
+    };
+
+    let content = std::fs::read_to_string(&expanded_path)
+        .map_err(|e| format!("Failed to read file '{}': {}", expanded_path, e))?;
+
+    Ok((key, content))
 }

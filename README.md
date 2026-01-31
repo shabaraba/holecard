@@ -9,6 +9,9 @@ Secure CLI password manager with dual-key encryption.
 - **System keyring integration**: Secret key stored securely in OS keyring
 - **Session caching**: Avoid repeated password entry with configurable timeout
 - **Flexible entries**: Custom key-value fields per entry
+- **SSH key management**: Store and manage SSH keys with ssh-agent integration 🆕
+- **SSH wrapper**: Auto-load keys and connect with aliases (`hc ssh connect git@github.com`) 🆕
+- **File loading**: Load fields directly from files with `--file` option 🆕
 - **TOTP support**: Dedicated TOTP entry for 2FA code generation with auto-clipboard copy
 - **Smart clipboard**: Copy specific fields with auto-clear after 30 seconds
 - **Template injection**: Render templates with entry fields
@@ -66,6 +69,12 @@ hc add github -f username=myuser -f password=mypass
 # Or add interactively
 hc add
 
+# Add SSH key from file
+hc add github-key --file private_key=~/.ssh/id_ed25519 -f alias="git@github.com"
+
+# Connect via SSH (auto-loads key)
+hc ssh connect git@github.com
+
 # List entries
 hc list
 
@@ -93,8 +102,17 @@ hc totp get github
 # Add entry with custom fields
 hc add aws -f access_key=AKIA... -f secret_key=...
 
+# Add entry with fields from files
+hc add github-key \
+  --file private_key=~/.ssh/id_ed25519 \
+  --file public_key=~/.ssh/id_ed25519.pub \
+  -f alias="git@github.com"
+
 # Edit existing entry
-hc edit github
+hc edit github -f password=newpass
+
+# Edit with file field
+hc edit github-key --file private_key=~/.ssh/id_rsa
 
 # Remove entry
 hc rm github
@@ -111,6 +129,44 @@ hc export backup.json
 hc import backup.json
 hc import backup.json --overwrite  # Replace existing entries
 ```
+
+### SSH Key Management
+
+Securely store SSH keys and manage ssh-agent with seamless integration.
+
+```bash
+# Add SSH key from file (recommended - preserves newlines)
+hc add my-server \
+  --file private_key=~/.ssh/id_rsa \
+  -f alias="user@server.com,prod" \
+  -f passphrase="optional"
+
+# Connect via SSH (auto-loads key)
+hc ssh connect user@server.com
+hc ssh connect prod
+hc ssh connect my-server
+
+# Pass additional SSH arguments
+hc ssh connect prod -- -p 2222 -v
+
+# Manually load key into ssh-agent
+hc ssh load my-server
+
+# Load with lifetime (auto-expires after 8 hours)
+hc ssh load my-server --lifetime 28800
+
+# List loaded keys in ssh-agent
+hc ssh list
+
+# Unload key from ssh-agent
+hc ssh unload my-server
+```
+
+**Why use `hc ssh` over plain `ssh-add`?**
+- Store encrypted SSH keys in vault with Argon2id + AES-256-GCM
+- Auto-load keys on connect with aliases (`git@github.com` → Entry name)
+- Manage passphrases securely without typing them repeatedly
+- Integrate with session management (`hc lock` clears both vault and ssh-agent)
 
 ### TOTP Support
 
@@ -278,3 +334,5 @@ Built with:
 - [aes-gcm](https://github.com/RustCrypto/AEADs) - Authenticated encryption
 - [keyring](https://github.com/hwchen/keyring-rs) - System keyring access
 - [totp-lite](https://github.com/fosskers/totp-lite) - TOTP implementation
+- [sha2](https://github.com/RustCrypto/hashes) - SSH key fingerprint calculation
+- [tempfile](https://github.com/Stebalien/tempfile) - Secure temporary file handling

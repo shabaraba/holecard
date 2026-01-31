@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password, Select};
+use dialoguer::{theme::ColorfulTheme, Confirm, Editor, Input, Password, Select};
 use std::collections::HashMap;
 
 use crate::domain::Entry;
@@ -158,11 +158,26 @@ pub fn prompt_edit_menu(entry: &Entry) -> Result<EditAction> {
 }
 
 pub fn prompt_field_value(key: &str) -> Result<String> {
-    Password::with_theme(&ColorfulTheme::default())
-        .with_prompt(format!("New value for '{}'", key))
-        .allow_empty_password(true)
-        .interact()
-        .context("Failed to read field value")
+    if key == "private_key" {
+        let value = Editor::new()
+            .edit("# Paste your SSH private key here (including BEGIN/END lines)\n# Lines starting with # will be removed")
+            .context("Failed to open editor")?
+            .unwrap_or_default();
+
+        let cleaned: String = value
+            .lines()
+            .filter(|line| !line.trim_start().starts_with('#'))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        Ok(cleaned.trim().to_string())
+    } else {
+        Password::with_theme(&ColorfulTheme::default())
+            .with_prompt(format!("New value for '{}'", key))
+            .allow_empty_password(true)
+            .interact()
+            .context("Failed to read field value")
+    }
 }
 
 pub fn prompt_new_field() -> Result<(String, String)> {
