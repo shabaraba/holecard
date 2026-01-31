@@ -43,7 +43,8 @@ pub fn handle_add(
 
     let entry_name = name.unwrap_or_else(|| input::prompt_entry_name().unwrap());
 
-    let mut custom_fields: HashMap<String, String> = if fields.is_empty() && file_fields.is_empty() {
+    let mut custom_fields: HashMap<String, String> = if fields.is_empty() && file_fields.is_empty()
+    {
         input::prompt_custom_fields()?
     } else {
         let mut combined = HashMap::new();

@@ -16,7 +16,7 @@ pub fn validate_private_key(key: &str) -> Result<SshKeyType> {
         let begin = format!("-----BEGIN {}-----", label);
         let end = format!("-----END {}-----", label);
         if key.contains(&begin) && key.contains(&end) {
-            return Ok(key_type.clone());
+            return Ok(*key_type);
         }
     }
 
@@ -56,19 +56,13 @@ mod tests {
     #[test]
     fn test_validate_openssh_private_key() {
         let key = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAA...\n-----END OPENSSH PRIVATE KEY-----";
-        assert!(matches!(
-            validate_private_key(key),
-            Ok(SshKeyType::OpenSsh)
-        ));
+        assert!(matches!(validate_private_key(key), Ok(SshKeyType::OpenSsh)));
     }
 
     #[test]
     fn test_validate_rsa_private_key() {
         let key = "-----BEGIN RSA PRIVATE KEY-----\nAAA...\n-----END RSA PRIVATE KEY-----";
-        assert!(matches!(
-            validate_private_key(key),
-            Ok(SshKeyType::Rsa)
-        ));
+        assert!(matches!(validate_private_key(key), Ok(SshKeyType::Rsa)));
     }
 
     #[test]

@@ -26,8 +26,7 @@ impl SshAgent {
         passphrase: Option<&str>,
         lifetime: Option<u32>,
     ) -> Result<()> {
-        let mut temp_file =
-            NamedTempFile::new().context("Failed to create temporary file")?;
+        let mut temp_file = NamedTempFile::new().context("Failed to create temporary file")?;
 
         temp_file
             .write_all(private_key.as_bytes())
@@ -37,10 +36,7 @@ impl SshAgent {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(
-                temp_file.path(),
-                std::fs::Permissions::from_mode(0o600),
-            )?;
+            std::fs::set_permissions(temp_file.path(), std::fs::Permissions::from_mode(0o600))?;
         }
 
         let mut cmd = Command::new("ssh-add");

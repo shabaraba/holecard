@@ -448,7 +448,11 @@ fn parse_file_field(s: &str) -> Result<(String, String), String> {
     let path = parts[1];
 
     let expanded_path = if path.starts_with('~') {
-        path.replacen('~', &std::env::var("HOME").unwrap_or_else(|_| ".".to_string()), 1)
+        path.replacen(
+            '~',
+            &std::env::var("HOME").unwrap_or_else(|_| ".".to_string()),
+            1,
+        )
     } else {
         path.to_string()
     };

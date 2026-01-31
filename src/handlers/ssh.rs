@@ -17,9 +17,7 @@ pub fn handle_ssh(
         SshCommands::Load { name, lifetime } => {
             handle_ssh_load(&name, lifetime, vault_name, keyring, config_dir)
         }
-        SshCommands::Unload { name } => {
-            handle_ssh_unload(&name, vault_name, keyring, config_dir)
-        }
+        SshCommands::Unload { name } => handle_ssh_unload(&name, vault_name, keyring, config_dir),
         SshCommands::List => handle_ssh_list(),
         SshCommands::Connect { target, ssh_args } => {
             handle_ssh_connect(&target, ssh_args, vault_name, keyring, config_dir)
