@@ -54,12 +54,10 @@ fn handle_ssh_load(
     agent.add_identity(private_key, passphrase, lifetime)?;
 
     println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
-    if let Some(sec) = lifetime {
-        if sec == 0 {
-            println!("  Lifetime: forever");
-        } else {
-            println!("  Lifetime: {} seconds", sec);
-        }
+    match lifetime {
+        Some(0) => println!("  Lifetime: forever"),
+        Some(sec) => println!("  Lifetime: {} seconds", sec),
+        None => {}
     }
 
     Ok(())
@@ -115,12 +113,8 @@ fn handle_ssh_connect(
 ) -> Result<()> {
     let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
-    let entry_name = find_entry_by_name_or_alias(&ctx.inner.vault, target).ok_or_else(|| {
-        anyhow::anyhow!(
-            "No entry found with name or alias '{}'.",
-            target
-        )
-    })?;
+    let entry_name = find_entry_by_name_or_alias(&ctx.inner.vault, target)
+        .ok_or_else(|| anyhow::anyhow!("No entry found with name or alias '{}'", target))?;
 
     let entry = ctx.inner.vault.get_entry(&entry_name)?;
 
@@ -140,10 +134,10 @@ fn handle_ssh_connect(
     } else {
         entry
             .custom_fields
-            .get("alias")
-            .and_then(|aliases| aliases.split(',').map(|s| s.trim()).next())
-            .context("Entry has no alias field and target is not in user@host format")?
-            .to_string()
+            .get("host")
+            .or_else(|| entry.custom_fields.get("alias"))
+            .and_then(|value| value.split(',').next().map(|s| s.trim().to_string()))
+            .context("Entry has no 'host' or 'alias' field and target is not in user@host format")?
     };
 
     println!("Connecting to {}...", ssh_target);
