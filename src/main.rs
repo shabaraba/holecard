@@ -24,6 +24,7 @@ fn main() -> Result<()> {
             EntryCommands::Add {
                 name,
                 field,
+                file,
                 generate,
                 gen_length,
                 gen_memorable,
@@ -35,6 +36,7 @@ fn main() -> Result<()> {
             } => handlers::vault::handle_add(
                 name,
                 field,
+                file,
                 generate,
                 gen_length,
                 gen_memorable,
@@ -66,6 +68,7 @@ fn main() -> Result<()> {
                 name,
                 interactive,
                 field,
+                file,
                 rm_field,
             } => {
                 if interactive {
@@ -79,6 +82,7 @@ fn main() -> Result<()> {
                     handlers::vault::handle_edit(
                         &name,
                         field,
+                        file,
                         rm_field,
                         vault_name,
                         &keyring,

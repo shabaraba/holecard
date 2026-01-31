@@ -26,6 +26,7 @@ pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
 pub fn handle_add(
     name: Option<String>,
     fields: Vec<(String, String)>,
+    file_fields: Vec<(String, String)>,
     generate: bool,
     gen_length: Option<usize>,
     gen_memorable: bool,
@@ -42,10 +43,13 @@ pub fn handle_add(
 
     let entry_name = name.unwrap_or_else(|| input::prompt_entry_name().unwrap());
 
-    let mut custom_fields: HashMap<String, String> = if fields.is_empty() {
+    let mut custom_fields: HashMap<String, String> = if fields.is_empty() && file_fields.is_empty() {
         input::prompt_custom_fields()?
     } else {
-        fields.into_iter().collect()
+        let mut combined = HashMap::new();
+        combined.extend(fields);
+        combined.extend(file_fields);
+        combined
     };
 
     if generate {
@@ -186,6 +190,7 @@ pub fn handle_list(
 pub fn handle_edit(
     name: &str,
     fields: Vec<(String, String)>,
+    file_fields: Vec<(String, String)>,
     rm_fields: Vec<String>,
     vault_name: Option<&str>,
     keyring: &KeyringManager,
@@ -199,10 +204,15 @@ pub fn handle_edit(
         .get_entry_mut(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    if !fields.is_empty() || !rm_fields.is_empty() {
+    if !fields.is_empty() || !file_fields.is_empty() || !rm_fields.is_empty() {
         for (key, value) in fields {
             entry.custom_fields.insert(key.clone(), value);
             println!("✓ Field '{}' updated", key);
+        }
+
+        for (key, value) in file_fields {
+            entry.custom_fields.insert(key.clone(), value);
+            println!("✓ Field '{}' updated from file", key);
         }
 
         for key in rm_fields {
@@ -218,7 +228,7 @@ pub fn handle_edit(
         println!("✓ Entry '{}' updated successfully!", name);
     } else {
         println!(
-            "⚠ No changes specified. Use -f to add/update fields or --rm-field to remove fields."
+            "⚠ No changes specified. Use -f to add/update fields, --file to add from file, or --rm-field to remove fields."
         );
     }
 
