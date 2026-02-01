@@ -43,6 +43,7 @@ impl SecretUri {
         Ok(Self { vault, item, field })
     }
 
+    #[allow(dead_code)]
     pub fn is_uri(s: &str) -> bool {
         s.trim().starts_with("hc://")
     }

@@ -9,6 +9,7 @@ impl TemplateEngine {
     /// Supports:
     /// - {{entry.field}} - specific field from entry
     /// - {{entry}} - all fields as KEY=value format
+    #[allow(dead_code)]
     pub fn render(template: &str, entry: &Entry) -> Result<String> {
         let re = Regex::new(r"\{\{([^}]+)\}\}").context("Failed to compile regex")?;
 
@@ -58,6 +59,7 @@ impl TemplateEngine {
         Ok(result)
     }
 
+    #[allow(dead_code)]
     fn expand_entry(entry: &Entry) -> String {
         entry
             .custom_fields
