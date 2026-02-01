@@ -95,11 +95,23 @@ fn main() -> Result<()> {
             }
         },
         Commands::Config { subcommand } => handlers::config::handle_config(subcommand, &config_dir),
-        Commands::Inject { entry, template } => {
-            handlers::template::handle_inject(&entry, &template, vault_name, &keyring, &config_dir)
+        Commands::Read { uri } => {
+            handlers::read::handle_read(&uri, vault_name, &keyring, &config_dir)
         }
-        Commands::Run { entry, command } => {
-            handlers::template::handle_run(&entry, &command, vault_name, &keyring, &config_dir)
+        Commands::Inject {
+            template,
+            input,
+            output,
+        } => handlers::inject::handle_inject(
+            template,
+            input,
+            output,
+            vault_name,
+            &keyring,
+            &config_dir,
+        ),
+        Commands::Run { env, command } => {
+            handlers::run::handle_run(env, &command, vault_name, &keyring, &config_dir)
         }
         Commands::Lock => handlers::session::handle_lock(&config_dir),
         Commands::Status => handlers::session::handle_status(&config_dir),

@@ -1,9 +1,11 @@
 pub mod config;
+pub mod inject;
 pub mod password;
 pub mod provider;
+pub mod read;
+pub mod run;
 pub mod session;
 pub mod ssh;
-pub mod template;
 pub mod totp;
 pub mod transfer;
 pub mod vault;
