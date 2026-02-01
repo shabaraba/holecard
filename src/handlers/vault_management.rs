@@ -12,6 +12,7 @@ use crate::{cli::input, config::Config, domain::Vault};
 
 pub fn handle_vault(
     subcommand: VaultCommands,
+    vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -26,7 +27,7 @@ pub fn handle_vault(
         VaultCommands::Copy { entry, to_vault } => {
             handle_copy(entry, to_vault, keyring, config_dir)
         }
-        VaultCommands::Passwd => handle_passwd(keyring, config_dir),
+        VaultCommands::Passwd => handle_passwd(vault_name, keyring, config_dir),
     }
 }
 
@@ -241,13 +242,17 @@ fn handle_copy(
     Ok(())
 }
 
-fn handle_passwd(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
+fn handle_passwd(
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
     println!("\n========================================");
     println!("     Change Master Password");
     println!("========================================");
     println!("\nFirst, verify your current master password:");
 
-    let ctx = MultiVaultContext::load(None, keyring, config_dir)?;
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
     let vault_name = ctx.vault_name.clone();
 
     let registry = VaultRegistry::load(config_dir)?;
