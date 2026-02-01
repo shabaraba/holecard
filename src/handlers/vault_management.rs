@@ -81,9 +81,16 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
     }
 
     let crypto = CryptoServiceImpl::new();
-    let secret_key = crypto.generate_secret_key();
 
-    keyring.save_secret_key(&secret_key)?;
+    // Reuse existing secret key if available, otherwise generate a new one
+    let secret_key = match keyring.load_secret_key() {
+        Ok(existing_key) => existing_key,
+        Err(_) => {
+            let new_key = crypto.generate_secret_key();
+            keyring.save_secret_key(&new_key)?;
+            new_key
+        }
+    };
 
     let vault = Vault::new();
     let storage = VaultStorage::new(crypto);
@@ -97,6 +104,11 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     registry.create_vault(&name, vault_path)?;
+
+    // Save session so subsequent operations don't require re-entering password
+    let config = Config::load(config_dir)?;
+    let session = SessionManager::new(config_dir, &name, config.session_timeout_minutes);
+    session.save_session(&derived_key, &salt)?;
 
     println!("\n========================================");
     println!("     Vault '{}' Created Successfully", name);
