@@ -398,6 +398,9 @@ pub enum VaultCommands {
         #[arg(help = "Target vault name")]
         to_vault: String,
     },
+
+    #[command(about = "Change master password")]
+    Passwd,
 }
 
 #[derive(Subcommand)]

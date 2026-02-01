@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use rand::RngCore;
 use std::path::Path;
 
 use crate::cli::commands::VaultCommands;
@@ -25,6 +26,7 @@ pub fn handle_vault(
         VaultCommands::Copy { entry, to_vault } => {
             handle_copy(entry, to_vault, keyring, config_dir)
         }
+        VaultCommands::Passwd => handle_passwd(keyring, config_dir),
     }
 }
 
@@ -235,6 +237,62 @@ fn handle_copy(
         "✓ Entry '{}' copied from '{}' to '{}'",
         entry_name, source_vault_name, to_vault
     );
+
+    Ok(())
+}
+
+fn handle_passwd(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
+    println!("\n========================================");
+    println!("     Change Master Password");
+    println!("========================================");
+    println!("\nFirst, verify your current master password:");
+
+    let ctx = MultiVaultContext::load(None, keyring, config_dir)?;
+    let vault_name = ctx.vault_name.clone();
+
+    let registry = VaultRegistry::load(config_dir)?;
+    let vault_path = registry.get_vault(&vault_name)?.path.clone();
+
+    let backup_path = vault_path.with_extension("enc.backup");
+    std::fs::copy(&vault_path, &backup_path).context("Failed to create vault backup")?;
+
+    println!("\n========================================");
+    println!("     Set New Master Password");
+    println!("========================================");
+    println!("\nEnter new master password:");
+    let new_password = input::prompt_master_password_confirm()?;
+
+    let mut salt = [0u8; 16];
+    rand::rngs::OsRng.fill_bytes(&mut salt);
+
+    let secret_key = keyring.load_secret_key()?;
+    let crypto = CryptoServiceImpl::new();
+    let derived_key = crypto
+        .derive_key(&new_password, &secret_key, &salt)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    if let Err(e) = ctx
+        .inner
+        .storage
+        .save_with_cached_key(&ctx.inner.vault, &vault_path, &derived_key, &salt)
+    {
+        std::fs::rename(&backup_path, &vault_path).context("Failed to restore vault backup")?;
+        anyhow::bail!("Failed to re-encrypt vault: {}. Vault restored from backup.", e);
+    }
+
+    let config = Config::load(config_dir)?;
+    let session = SessionManager::new(config_dir, &vault_name, config.session_timeout_minutes);
+
+    let clear_result = session.clear_session();
+    let save_result = session.save_session(&derived_key, &salt);
+    std::fs::remove_file(&backup_path).ok();
+
+    clear_result?;
+    save_result?;
+
+    println!("\n✓ Master password changed successfully");
+    println!("✓ Session renewed");
+    println!("\nNext vault access will use the new password.");
 
     Ok(())
 }
