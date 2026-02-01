@@ -28,19 +28,28 @@ pub enum Commands {
         subcommand: Option<ConfigCommands>,
     },
 
-    #[command(about = "Inject environment variables from template")]
-    Inject {
-        #[arg(help = "Entry name")]
-        entry: String,
-
-        #[arg(help = "Template string with {{entry.field}} or {{entry}}")]
-        template: String,
+    #[command(about = "Read a secret value from URI")]
+    Read {
+        #[arg(help = "Secret URI (hc://[vault/]item/field)")]
+        uri: String,
     },
 
-    #[command(about = "Run command with entry environment variables")]
+    #[command(about = "Inject secrets from template with URI references")]
+    Inject {
+        #[arg(help = "Template string with {{ hc://... }} URIs (if --input not specified)")]
+        template: Option<String>,
+
+        #[arg(short = 'i', long, help = "Input template file (use '-' for stdin)")]
+        input: Option<String>,
+
+        #[arg(short = 'o', long, help = "Output file (default: stdout)")]
+        output: Option<String>,
+    },
+
+    #[command(about = "Run command with environment variables from URIs")]
     Run {
-        #[arg(help = "Entry name to use for environment variables")]
-        entry: String,
+        #[arg(long, value_parser = parse_env_var, help = "Environment variable (KEY=hc://...)")]
+        env: Vec<(String, String)>,
 
         #[arg(last = true, help = "Command and arguments to execute")]
         command: Vec<String>,
@@ -461,4 +470,15 @@ fn parse_file_field(s: &str) -> Result<(String, String), String> {
         .map_err(|e| format!("Failed to read file '{}': {}", expanded_path, e))?;
 
     Ok((key, content))
+}
+
+fn parse_env_var(s: &str) -> Result<(String, String), String> {
+    let parts: Vec<&str> = s.splitn(2, '=').collect();
+    if parts.len() != 2 {
+        return Err(format!(
+            "Invalid env var format: '{}'. Expected KEY=value",
+            s
+        ));
+    }
+    Ok((parts[0].to_string(), parts[1].to_string()))
 }
