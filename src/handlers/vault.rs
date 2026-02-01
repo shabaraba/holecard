@@ -17,6 +17,7 @@ pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
         crate::cli::commands::VaultCommands::Create {
             name: "default".to_string(),
         },
+        None,
         keyring,
         config_dir,
     )

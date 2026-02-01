@@ -149,7 +149,7 @@ fn main() -> Result<()> {
             clip,
         ),
         Commands::Vault { subcommand } => {
-            handlers::vault_management::handle_vault(subcommand, &keyring, &config_dir)
+            handlers::vault_management::handle_vault(subcommand, vault_name, &keyring, &config_dir)
         }
         Commands::Ssh { subcommand } => {
             handlers::ssh::handle_ssh(subcommand, vault_name, &keyring, &config_dir)
