@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 const SERVICE_NAME: &str = "hc";
 const USERNAME: &str = "secret_key";
+const MASTER_PASSWORD_PREFIX: &str = "master_password";
 
 pub struct KeyringManager {
     fallback_path: PathBuf,
@@ -74,6 +75,42 @@ impl KeyringManager {
                 .context("Failed to delete fallback secret key file")?;
         }
 
+        Ok(())
+    }
+
+    pub fn save_master_password(&self, vault_name: &str, master_password: &str) -> Result<()> {
+        let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+        match Entry::new(SERVICE_NAME, &username) {
+            Ok(entry) => {
+                entry
+                    .set_password(master_password)
+                    .context("Failed to save master password to OS keyring")?;
+                Ok(())
+            }
+            Err(e) => Err(anyhow::anyhow!(
+                "Failed to access keyring for master password: {}",
+                e
+            )),
+        }
+    }
+
+    pub fn load_master_password(&self, vault_name: &str) -> Result<Option<String>> {
+        let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+        match Entry::new(SERVICE_NAME, &username) {
+            Ok(entry) => match entry.get_password() {
+                Ok(pwd) => Ok(Some(pwd.trim().to_string())),
+                Err(_) => Ok(None),
+            },
+            Err(_) => Ok(None),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn delete_master_password(&self, vault_name: &str) -> Result<()> {
+        let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+        if let Ok(entry) = Entry::new(SERVICE_NAME, &username) {
+            let _ = entry.delete_password();
+        }
         Ok(())
     }
 }

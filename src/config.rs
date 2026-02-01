@@ -7,6 +7,12 @@ use std::path::{Path, PathBuf};
 pub struct Config {
     pub vault_path: PathBuf,
     pub session_timeout_minutes: u64,
+    #[serde(default = "default_enable_biometric")]
+    pub enable_biometric: bool,
+}
+
+fn default_enable_biometric() -> bool {
+    cfg!(target_os = "macos")
 }
 
 impl Config {
@@ -36,6 +42,7 @@ impl Config {
         Self {
             vault_path: config_dir.join("vault.enc"),
             session_timeout_minutes: 60,
+            enable_biometric: default_enable_biometric(),
         }
     }
 }

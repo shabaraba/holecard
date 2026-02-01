@@ -18,6 +18,48 @@ pub struct VaultContext {
     vault_name: String,
 }
 
+fn resolve_master_password(
+    config: &Config,
+    keyring: &KeyringManager,
+    vault_name: &str,
+) -> Result<String> {
+    if !config.enable_biometric {
+        return input::prompt_master_password();
+    }
+
+    let biometric = crate::infrastructure::get_biometric_auth();
+    if !biometric.is_available() {
+        return input::prompt_master_password();
+    }
+
+    println!("🔐 Authenticating with Touch ID...");
+    match biometric.authenticate("Unlock your vault") {
+        Ok(true) => {
+            println!("✅ Touch ID authentication successful");
+            match keyring.load_master_password(vault_name)? {
+                Some(pwd) => {
+                    println!("🔓 Unlocking vault...");
+                    Ok(pwd)
+                }
+                None => {
+                    println!("⚠️  No cached password found. Please enter your master password.");
+                    let pwd = input::prompt_master_password()?;
+                    keyring.save_master_password(vault_name, &pwd)?;
+                    Ok(pwd)
+                }
+            }
+        }
+        Ok(false) => {
+            println!("⚠️  Touch ID authentication failed. Falling back to password.");
+            input::prompt_master_password()
+        }
+        Err(e) => {
+            eprintln!("⚠️  Touch ID error: {}. Falling back to password.", e);
+            input::prompt_master_password()
+        }
+    }
+}
+
 impl VaultContext {
     pub fn load(
         vault_path: &Path,
@@ -37,7 +79,8 @@ impl VaultContext {
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
             (vault, cached)
         } else {
-            let master_password = input::prompt_master_password()?;
+            let master_password = resolve_master_password(&config, keyring, vault_name)?;
+
             let (derived_key, salt) = storage
                 .derive_key_from_vault(vault_path, &master_password, &secret_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;

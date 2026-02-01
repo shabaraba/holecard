@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::cli::input;
 use crate::domain::{Entry, PasswordService};
 use crate::handlers::password::copy_to_clipboard_with_clear;
-use crate::infrastructure::KeyringManager;
+use crate::infrastructure::{require_biometric_auth, KeyringManager};
 use crate::multi_vault_context::MultiVaultContext;
 
 pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
@@ -93,6 +93,12 @@ pub fn handle_get(
     config_dir: &Path,
 ) -> Result<()> {
     let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+
+    // Require Touch ID for sensitive operations (show or clip)
+    if show || clip.is_some() {
+        require_biometric_auth(&ctx.inner.config, "Access sensitive data")?;
+    }
+
     let entry = ctx
         .inner
         .vault
@@ -106,7 +112,6 @@ pub fn handle_get(
     if !entry.custom_fields.is_empty() {
         println!("\nFields:");
         if show {
-            let _password = input::prompt_master_password()?;
             for (key, value) in &entry.custom_fields {
                 println!("  {}: {}", key, value);
             }
@@ -199,6 +204,9 @@ pub fn handle_edit(
     config_dir: &Path,
 ) -> Result<()> {
     let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+
+    // Require Touch ID for edit operations
+    require_biometric_auth(&ctx.inner.config, "Modify vault entry")?;
 
     let entry = ctx
         .inner
@@ -294,6 +302,9 @@ pub fn handle_rm(
     config_dir: &Path,
 ) -> Result<()> {
     let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+
+    // Require Touch ID for remove operations
+    require_biometric_auth(&ctx.inner.config, "Delete vault entry")?;
 
     ctx.inner
         .vault
