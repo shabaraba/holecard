@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use regex::Regex;
 use std::path::Path;
 use std::sync::LazyLock;
@@ -8,8 +8,7 @@ use crate::infrastructure::KeyringManager;
 use crate::multi_vault_context::MultiVaultContext;
 
 static TEMPLATE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\{\{\s*(hc://[^}]+)\s*\}\}")
-        .expect("Failed to compile template regex")
+    Regex::new(r"\{\{\s*(hc://[^}]+)\s*\}\}").expect("Failed to compile template regex")
 });
 
 pub struct SecretResolver;
@@ -33,13 +32,9 @@ impl SecretResolver {
             .get_entry(&uri.item)
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-        entry
-            .custom_fields
-            .get(&uri.field)
-            .cloned()
-            .ok_or_else(|| {
-                anyhow::anyhow!("Field '{}' not found in entry '{}'", uri.field, uri.item)
-            })
+        entry.custom_fields.get(&uri.field).cloned().ok_or_else(|| {
+            anyhow::anyhow!("Field '{}' not found in entry '{}'", uri.field, uri.item)
+        })
     }
 
     pub fn resolve_template(
@@ -88,7 +83,9 @@ mod tests {
 
     #[test]
     fn test_has_uri_references() {
-        assert!(SecretResolver::has_uri_references("{{ hc://vault/item/field }}"));
+        assert!(SecretResolver::has_uri_references(
+            "{{ hc://vault/item/field }}"
+        ));
         assert!(SecretResolver::has_uri_references("hc://vault/item/field"));
         assert!(!SecretResolver::has_uri_references("plain text"));
         assert!(!SecretResolver::has_uri_references("{{ entry.field }}"));

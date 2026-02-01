@@ -22,5 +22,4 @@ pub use secret_resolver::SecretResolver;
 pub use ssh_key::{find_entry_by_name_or_alias, validate_private_key};
 pub use template::TemplateEngine;
 pub use totp::TotpService;
-pub use uri::SecretUri;
 pub use vault::Vault;

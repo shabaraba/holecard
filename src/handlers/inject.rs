@@ -21,10 +21,8 @@ pub fn handle_inject(
                 .context("Failed to read from stdin")?;
             buffer
         }
-        (Some(path), None) => {
-            std::fs::read_to_string(path)
-                .with_context(|| format!("Failed to read template from {}", path))?
-        }
+        (Some(path), None) => std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read template from {}", path))?,
         (None, Some(tpl)) => tpl.to_string(),
         (Some(_), Some(_)) => {
             anyhow::bail!("Cannot specify both --input and template string");
@@ -34,7 +32,8 @@ pub fn handle_inject(
         }
     };
 
-    let rendered = SecretResolver::resolve_template(&template_str, vault_name, keyring, config_dir)?;
+    let rendered =
+        SecretResolver::resolve_template(&template_str, vault_name, keyring, config_dir)?;
 
     if let Some(output_path) = output {
         std::fs::write(&output_path, rendered.as_bytes())

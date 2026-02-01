@@ -1,15 +1,13 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use regex::Regex;
 use std::sync::LazyLock;
 
 static URI_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^hc://(?:([^/]+)/)?([^/]+)/(.+)$")
-        .expect("Failed to compile URI regex")
+    Regex::new(r"^hc://(?:([^/]+)/)?([^/]+)/(.+)$").expect("Failed to compile URI regex")
 });
 
 static ENV_VAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]+))?\}")
-        .expect("Failed to compile env var regex")
+    Regex::new(r"\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]+))?\}").expect("Failed to compile env var regex")
 });
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,11 +40,7 @@ impl SecretUri {
             anyhow::bail!("Field name cannot be empty in URI: {}", uri);
         }
 
-        Ok(Self {
-            vault,
-            item,
-            field,
-        })
+        Ok(Self { vault, item, field })
     }
 
     pub fn is_uri(s: &str) -> bool {
@@ -54,16 +48,17 @@ impl SecretUri {
     }
 
     pub fn expand_env_vars(value: &str) -> String {
-        ENV_VAR_REGEX.replace_all(value, |caps: &regex::Captures| {
-            let var_name = &caps[1];
-            let default_value = caps.get(2).map(|m| m.as_str());
+        ENV_VAR_REGEX
+            .replace_all(value, |caps: &regex::Captures| {
+                let var_name = &caps[1];
+                let default_value = caps.get(2).map(|m| m.as_str());
 
-            std::env::var(var_name)
-                .ok()
-                .or_else(|| default_value.map(String::from))
-                .unwrap_or_else(|| format!("${{{}}}", var_name))
-        })
-        .to_string()
+                std::env::var(var_name)
+                    .ok()
+                    .or_else(|| default_value.map(String::from))
+                    .unwrap_or_else(|| format!("${{{}}}", var_name))
+            })
+            .to_string()
     }
 }
 
@@ -99,7 +94,10 @@ mod tests {
     fn test_parse_invalid_scheme() {
         let result = SecretUri::parse("http://vault/item/field");
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid URI scheme"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Invalid URI scheme"));
     }
 
     #[test]
