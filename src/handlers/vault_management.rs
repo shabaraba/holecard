@@ -271,13 +271,16 @@ fn handle_passwd(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
         .derive_key(&new_password, &secret_key, &salt)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    if let Err(e) = ctx
-        .inner
-        .storage
-        .save_with_cached_key(&ctx.inner.vault, &vault_path, &derived_key, &salt)
+    if let Err(e) =
+        ctx.inner
+            .storage
+            .save_with_cached_key(&ctx.inner.vault, &vault_path, &derived_key, &salt)
     {
         std::fs::rename(&backup_path, &vault_path).context("Failed to restore vault backup")?;
-        anyhow::bail!("Failed to re-encrypt vault: {}. Vault restored from backup.", e);
+        anyhow::bail!(
+            "Failed to re-encrypt vault: {}. Vault restored from backup.",
+            e
+        );
     }
 
     let config = Config::load(config_dir)?;
