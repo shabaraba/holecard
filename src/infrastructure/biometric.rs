@@ -29,7 +29,7 @@ import LocalAuthentication
 let context = LAContext()
 var error: NSError?
 
-guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {{
+guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {{
     print("false")
     exit(1)
 }}
@@ -37,7 +37,7 @@ guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error:
 let semaphore = DispatchSemaphore(value: 0)
 var authResult = false
 
-context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "{}") {{ success, authError in
+context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "{}") {{ success, authError in
     authResult = success
     semaphore.signal()
 }}
@@ -103,14 +103,14 @@ pub fn require_biometric_auth(config: &Config, reason: &str) -> Result<()> {
         return Ok(());
     }
 
-    println!("🔐 Touch ID authentication required...");
+    println!("🔐 Authentication required...");
     match biometric.authenticate(reason) {
         Ok(true) => {
             println!("✅ Authenticated");
             Ok(())
         }
-        Ok(false) => Err(anyhow::anyhow!("Touch ID authentication failed")),
-        Err(e) => Err(anyhow::anyhow!("Touch ID error: {}", e)),
+        Ok(false) => Err(anyhow::anyhow!("Authentication failed")),
+        Err(e) => Err(anyhow::anyhow!("Authentication error: {}", e)),
     }
 }
 

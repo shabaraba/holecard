@@ -32,10 +32,10 @@ fn resolve_master_password(
         return input::prompt_master_password();
     }
 
-    println!("🔐 Authenticating with Touch ID...");
+    println!("🔐 Authenticating...");
     match biometric.authenticate("Unlock your vault") {
         Ok(true) => {
-            println!("✅ Touch ID authentication successful");
+            println!("✅ Authentication successful");
             match keyring.load_master_password(vault_name)? {
                 Some(pwd) => {
                     println!("🔓 Unlocking vault...");
@@ -50,11 +50,11 @@ fn resolve_master_password(
             }
         }
         Ok(false) => {
-            println!("⚠️  Touch ID authentication failed. Falling back to password.");
+            println!("⚠️  Authentication failed. Falling back to password.");
             input::prompt_master_password()
         }
         Err(e) => {
-            eprintln!("⚠️  Touch ID error: {}. Falling back to password.", e);
+            eprintln!("⚠️  Authentication error: {}. Falling back to password.", e);
             input::prompt_master_password()
         }
     }
