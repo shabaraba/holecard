@@ -13,15 +13,24 @@ pub struct MacOSBiometric;
 #[cfg(target_os = "macos")]
 impl BiometricAuth for MacOSBiometric {
     fn is_available(&self) -> bool {
-        use security_framework::os::macos::keychain::SecKeychain;
-        SecKeychain::default().is_ok()
+        let script = r#"
+import Foundation
+import LocalAuthentication
+
+let context = LAContext()
+var error: NSError?
+let available = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+print(available ? "true" : "false")
+exit(available ? 0 : 1)
+"#;
+        super::swift_runner::run_swift(script)
+            .map(|o| o.success)
+            .unwrap_or(false)
     }
 
     fn authenticate(&self, reason: &str) -> Result<bool> {
-        use std::process::Command;
-        use std::io::Write;
-
-        let swift_code = format!(
+        let escaped_reason = reason.replace('"', "\\\"");
+        let script = format!(
             r#"
 import Foundation
 import LocalAuthentication
@@ -30,40 +39,24 @@ let context = LAContext()
 var error: NSError?
 
 guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {{
-    print("false")
     exit(1)
 }}
 
 let semaphore = DispatchSemaphore(value: 0)
 var authResult = false
 
-context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "{}") {{ success, authError in
+context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "{escaped_reason}") {{ success, _ in
     authResult = success
     semaphore.signal()
 }}
 
 semaphore.wait()
-print(authResult ? "true" : "false")
 exit(authResult ? 0 : 1)
-"#,
-            reason.replace("\"", "\\\"")
+"#
         );
 
-        let mut child = Command::new("swift")
-            .arg("-")
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(swift_code.as_bytes())?;
-        }
-
-        let output = child.wait_with_output()?;
-        let result = String::from_utf8_lossy(&output.stdout).trim().to_string();
-
-        Ok(output.status.success() && result == "true")
+        let output = super::swift_runner::run_swift(&script)?;
+        Ok(output.success)
     }
 }
 
@@ -86,7 +79,6 @@ pub fn get_biometric_auth() -> Box<dyn BiometricAuth> {
     {
         Box::new(MacOSBiometric)
     }
-
     #[cfg(not(target_os = "macos"))]
     {
         Box::new(StubBiometric)
