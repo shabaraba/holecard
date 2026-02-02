@@ -1052,6 +1052,7 @@ dependencies = [
  "rand",
  "regex",
  "reqwest",
+ "security-framework",
  "serde",
  "serde_json",
  "sha2",

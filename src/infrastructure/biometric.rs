@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::process::Command;
 
 use crate::config::Config;
 
@@ -14,41 +13,57 @@ pub struct MacOSBiometric;
 #[cfg(target_os = "macos")]
 impl BiometricAuth for MacOSBiometric {
     fn is_available(&self) -> bool {
-        Command::new("security")
-            .arg("authorizationdb")
-            .arg("read")
-            .arg("system.login.done")
-            .output()
-            .is_ok()
+        use security_framework::os::macos::keychain::SecKeychain;
+        SecKeychain::default().is_ok()
     }
 
     fn authenticate(&self, reason: &str) -> Result<bool> {
-        let output = Command::new("osascript")
-            .arg("-e")
-            .arg(format!(
-                r#"display dialog "{}" with title "holecard Authentication" buttons {{"Cancel", "Authenticate"}} default button "Authenticate""#,
-                reason
-            ))
-            .output()?;
+        use std::process::Command;
+        use std::io::Write;
 
-        if !output.status.success() {
-            return Ok(false);
+        let swift_code = format!(
+            r#"
+import Foundation
+import LocalAuthentication
+
+let context = LAContext()
+var error: NSError?
+
+guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {{
+    print("false")
+    exit(1)
+}}
+
+let semaphore = DispatchSemaphore(value: 0)
+var authResult = false
+
+context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "{}") {{ success, authError in
+    authResult = success
+    semaphore.signal()
+}}
+
+semaphore.wait()
+print(authResult ? "true" : "false")
+exit(authResult ? 0 : 1)
+"#,
+            reason.replace("\"", "\\\"")
+        );
+
+        let mut child = Command::new("swift")
+            .arg("-")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(swift_code.as_bytes())?;
         }
 
-        let auth_output = Command::new("security")
-            .arg("execute-with-privileges")
-            .arg("/usr/bin/true")
-            .output();
+        let output = child.wait_with_output()?;
+        let result = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
-        match auth_output {
-            Ok(result) => Ok(result.status.success()),
-            Err(_) => {
-                let fallback = Command::new("security")
-                    .arg("authorize")
-                    .output()?;
-                Ok(fallback.status.success())
-            }
-        }
+        Ok(output.status.success() && result == "true")
     }
 }
 

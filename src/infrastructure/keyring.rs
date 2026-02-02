@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 use keyring::Entry;
 use std::fs;
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
+use std::process::Command;
 
 const SERVICE_NAME: &str = "hc";
 const USERNAME: &str = "secret_key";
@@ -78,6 +80,74 @@ impl KeyringManager {
         Ok(())
     }
 
+    #[cfg(target_os = "macos")]
+    pub fn save_master_password(&self, vault_name: &str, master_password: &str) -> Result<()> {
+        use std::io::Write;
+
+        let label = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+        let service = SERVICE_NAME;
+
+        let script = format!(
+            r#"
+import Foundation
+import Security
+
+let service = "{}" as CFString
+let account = "{}" as CFString
+let password = "{}".data(using: .utf8)!
+
+var query: [String: Any] = [
+    kSecClass as String: kSecClassGenericPassword,
+    kSecAttrService as String: service,
+    kSecAttrAccount as String: account,
+    kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+    kSecValueData as String: password
+]
+
+SecItemDelete(query as CFDictionary)
+
+let status = SecItemAdd(query as CFDictionary, nil)
+if status == errSecSuccess {{
+    print("success")
+    exit(0)
+}} else {{
+    print("error: \(status)")
+    exit(1)
+}}
+"#,
+            service,
+            label,
+            master_password.replace("\"", "\\\"").replace("\\", "\\\\")
+        );
+
+        let mut child = Command::new("swift")
+            .arg("-")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .context("Failed to spawn swift")?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(script.as_bytes())?;
+        }
+
+        let output = child.wait_with_output()?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return Err(anyhow::anyhow!(
+                "Failed to save password to keychain.\nstdout: {}\nstderr: {}",
+                stdout,
+                stderr
+            ));
+        }
+
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "macos"))]
     pub fn save_master_password(&self, vault_name: &str, master_password: &str) -> Result<()> {
         let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
         match Entry::new(SERVICE_NAME, &username) {
@@ -94,6 +164,63 @@ impl KeyringManager {
         }
     }
 
+    #[cfg(target_os = "macos")]
+    pub fn load_master_password(&self, vault_name: &str) -> Result<Option<String>> {
+        use std::io::Write;
+
+        let label = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+        let service = SERVICE_NAME;
+
+        let script = format!(
+            r#"
+import Foundation
+import Security
+
+let service = "{}" as CFString
+let account = "{}" as CFString
+
+let query: [String: Any] = [
+    kSecClass as String: kSecClassGenericPassword,
+    kSecAttrService as String: service,
+    kSecAttrAccount as String: account,
+    kSecReturnData as String: true
+]
+
+var item: CFTypeRef?
+let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+if status == errSecSuccess, let data = item as? Data, let password = String(data: data, encoding: .utf8) {{
+    print(password)
+    exit(0)
+}} else {{
+    exit(1)
+}}
+"#,
+            service, label
+        );
+
+        let mut child = Command::new("swift")
+            .arg("-")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(script.as_bytes())?;
+        }
+
+        let output = child.wait_with_output()?;
+
+        if output.status.success() {
+            let password = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            Ok(Some(password))
+        } else {
+            Ok(None)
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
     pub fn load_master_password(&self, vault_name: &str) -> Result<Option<String>> {
         let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
         match Entry::new(SERVICE_NAME, &username) {
@@ -105,6 +232,50 @@ impl KeyringManager {
         }
     }
 
+    #[cfg(target_os = "macos")]
+    #[allow(dead_code)]
+    pub fn delete_master_password(&self, vault_name: &str) -> Result<()> {
+        use std::io::Write;
+
+        let label = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+        let service = SERVICE_NAME;
+
+        let script = format!(
+            r#"
+import Foundation
+import Security
+
+let service = "{}" as CFString
+let account = "{}" as CFString
+
+let query: [String: Any] = [
+    kSecClass as String: kSecClassGenericPassword,
+    kSecAttrService as String: service,
+    kSecAttrAccount as String: account,
+]
+
+SecItemDelete(query as CFDictionary)
+exit(0)
+"#,
+            service, label
+        );
+
+        let mut child = Command::new("swift")
+            .arg("-")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(script.as_bytes())?;
+        }
+
+        let _ = child.wait_with_output()?;
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "macos"))]
     #[allow(dead_code)]
     pub fn delete_master_password(&self, vault_name: &str) -> Result<()> {
         let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
