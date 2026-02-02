@@ -137,7 +137,11 @@ impl VaultContext {
             &self.vault_name,
             self.config.session_timeout_minutes,
         );
-        session.save_session(&self.session_data.derived_key, &self.session_data.salt, entry_names)?;
+        session.save_session(
+            &self.session_data.derived_key,
+            &self.session_data.salt,
+            entry_names,
+        )?;
 
         Ok(())
     }

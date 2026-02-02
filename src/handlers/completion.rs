@@ -55,7 +55,8 @@ pub fn handle_completion(shell: &str) -> Result<()> {
 }
 
 fn print_bash_dynamic_completion() {
-    println!(r#"
+    println!(
+        r#"
 # Dynamic entry name completion
 _hc_complete_entry_names() {{
     local entries
@@ -74,7 +75,8 @@ _hc_entry_get() {{
 }}
 
 complete -F _hc_entry_get hc
-"#);
+"#
+    );
 }
 
 fn patch_zsh_completion(completion: String) -> String {
@@ -107,7 +109,8 @@ _hc_entry_names() {
 }
 
 fn print_fish_dynamic_completion() {
-    println!(r#"
+    println!(
+        r#"
 # Dynamic entry name completion for fish
 function __hc_entry_names
     hc __complete-entries 2>/dev/null
@@ -116,7 +119,8 @@ end
 complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from get" -a "(__hc_entry_names)"
 complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from edit" -a "(__hc_entry_names)"
 complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from remove" -a "(__hc_entry_names)"
-"#);
+"#
+    );
 }
 
 pub fn handle_complete_entries(vault_name: Option<&str>, config_dir: &Path) -> Result<()> {
@@ -129,8 +133,7 @@ pub fn handle_complete_entries(vault_name: Option<&str>, config_dir: &Path) -> R
     };
 
     let config = Config::load(config_dir)?;
-    let session =
-        SessionManager::new(config_dir, &vault_name, config.session_timeout_minutes);
+    let session = SessionManager::new(config_dir, &vault_name, config.session_timeout_minutes);
 
     let entry_names = session.load_entry_names().unwrap_or_default();
 
