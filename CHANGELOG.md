@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/shabaraba/holecard/compare/v0.1.1...v0.2.0) (2026-02-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* Command structure has been reorganized for better UX and consistency across the CLI.
+
+### Features
+
+* add master password change functionality ([#36](https://github.com/shabaraba/holecard/issues/36)) ([d40d40e](https://github.com/shabaraba/holecard/commit/d40d40eb91c5385fcc71d529c4b425d5c48717a0))
+* add multi-vault support with vault management commands ([#33](https://github.com/shabaraba/holecard/issues/33)) ([fcc7b3d](https://github.com/shabaraba/holecard/commit/fcc7b3d1498290884f6d1fde1adbaa4d32f5e3f2))
+* add password generation functionality ([#32](https://github.com/shabaraba/holecard/issues/32)) ([343fd1e](https://github.com/shabaraba/holecard/commit/343fd1e3978ff6cb39f6b92bed6a809bc1236954))
+* add provider integration for GitHub and Cloudflare ([#6](https://github.com/shabaraba/holecard/issues/6)) ([0a350d6](https://github.com/shabaraba/holecard/commit/0a350d6098c21ff1cc6a73282143beb4e237c4ea))
+* add shell completion support (bash/zsh/fish) ([#38](https://github.com/shabaraba/holecard/issues/38)) ([e61917e](https://github.com/shabaraba/holecard/commit/e61917e136100edf56fe11c47b265c90bfe5d731))
+* add SSH key management with ssh-agent integration ([#34](https://github.com/shabaraba/holecard/issues/34)) ([61fc88e](https://github.com/shabaraba/holecard/commit/61fc88e3991c5102da2e3e10820a5e9eff27467d))
+* add Touch ID authentication for macOS ([#37](https://github.com/shabaraba/holecard/issues/37)) ([6adf4b0](https://github.com/shabaraba/holecard/commit/6adf4b0b6d9fb1230086dcafc45c141309d162e6))
+* シークレット参照形式（hc://vault/item/field） ([#35](https://github.com/shabaraba/holecard/issues/35)) ([6c81a79](https://github.com/shabaraba/holecard/commit/6c81a798b6338098c5febc076c95e27b752dfab0))
+
 ## [0.1.1](https://github.com/shabaraba/holecard/compare/v0.1.0...v0.1.1) (2026-01-27)
 
 
