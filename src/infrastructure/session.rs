@@ -14,11 +14,15 @@ struct SessionMetadata {
     created_at: u64,
     last_accessed: u64,
     salt: String,
+    #[serde(default)]
+    entry_names: Vec<String>,
 }
 
 pub struct SessionData {
     pub derived_key: [u8; 32],
     pub salt: [u8; 16],
+    #[allow(dead_code)]
+    pub entry_names: Vec<String>,
 }
 
 pub struct SessionManager {
@@ -36,7 +40,12 @@ impl SessionManager {
         }
     }
 
-    pub fn save_session(&self, derived_key: &[u8; 32], salt: &[u8; 16]) -> Result<()> {
+    pub fn save_session(
+        &self,
+        derived_key: &[u8; 32],
+        salt: &[u8; 16],
+        entry_names: Vec<String>,
+    ) -> Result<()> {
         let encoded_key = BASE64.encode(derived_key);
         let encoded_salt = BASE64.encode(salt);
         let now = current_timestamp();
@@ -56,6 +65,7 @@ impl SessionManager {
             created_at: now,
             last_accessed: now,
             salt: encoded_salt,
+            entry_names,
         };
         let json = serde_json::to_string(&metadata)?;
         fs::write(&self.session_file, json)?;
@@ -110,7 +120,11 @@ impl SessionManager {
 
         self.touch_session()?;
 
-        Ok(Some(SessionData { derived_key, salt }))
+        Ok(Some(SessionData {
+            derived_key,
+            salt,
+            entry_names: metadata.entry_names,
+        }))
     }
 
     pub fn clear_session(&self) -> Result<()> {
@@ -127,6 +141,17 @@ impl SessionManager {
 
     pub fn is_active(&self) -> bool {
         self.load_session().ok().flatten().is_some()
+    }
+
+    pub fn load_entry_names(&self) -> Result<Vec<String>> {
+        if !self.session_file.exists() {
+            return Ok(Vec::new());
+        }
+
+        let content = fs::read_to_string(&self.session_file)?;
+        let metadata: SessionMetadata = serde_json::from_str(&content)?;
+
+        Ok(metadata.entry_names)
     }
 
     fn touch_session(&self) -> Result<()> {

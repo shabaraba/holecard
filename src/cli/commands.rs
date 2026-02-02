@@ -126,6 +126,18 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: SshCommands,
     },
+
+    #[command(about = "Generate shell completion script")]
+    Completion {
+        #[arg(help = "Shell type (bash, zsh, fish)")]
+        shell: String,
+    },
+
+    #[command(name = "__complete-entries", hide = true)]
+    __CompleteEntries {
+        #[arg(long)]
+        vault: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]

@@ -154,5 +154,9 @@ fn main() -> Result<()> {
         Commands::Ssh { subcommand } => {
             handlers::ssh::handle_ssh(subcommand, vault_name, &keyring, &config_dir)
         }
+        Commands::Completion { shell } => handlers::completion::handle_completion(&shell),
+        Commands::__CompleteEntries { vault } => {
+            handlers::completion::handle_complete_entries(vault.as_deref(), &config_dir)
+        }
     }
 }
