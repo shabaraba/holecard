@@ -7,11 +7,12 @@ Secure CLI password manager with dual-key encryption.
 - **Dual-key encryption**: Master password + secret key for enhanced security
 - **Strong cryptography**: Argon2id key derivation + AES-256-GCM encryption
 - **System keyring integration**: Secret key stored securely in OS keyring
+- **Biometric authentication**: Touch ID, Face ID, Apple Watch, Passkey support on macOS 🆕
 - **Session caching**: Avoid repeated password entry with configurable timeout
 - **Flexible entries**: Custom key-value fields per entry
-- **SSH key management**: Store and manage SSH keys with ssh-agent integration 🆕
-- **SSH wrapper**: Auto-load keys and connect with aliases (`hc ssh connect git@github.com`) 🆕
-- **File loading**: Load fields directly from files with `--file` option 🆕
+- **SSH key management**: Store and manage SSH keys with ssh-agent integration
+- **SSH wrapper**: Auto-load keys and connect with aliases (`hc ssh connect git@github.com`)
+- **File loading**: Load fields directly from files with `--file` option
 - **TOTP support**: Dedicated TOTP entry for 2FA code generation with auto-clipboard copy
 - **Smart clipboard**: Copy specific fields with auto-clear after 30 seconds
 - **Template injection**: Render templates with entry fields
@@ -210,6 +211,31 @@ hc run aws -- env | grep -E "^(ACCESS_KEY|SECRET_KEY)"
 hc run database -- psql -h localhost -U $USERNAME -d mydb
 ```
 
+### Biometric Authentication (macOS only)
+
+Touch ID, Face ID, Apple Watch, and Passkey authentication for seamless vault access.
+
+```bash
+# Enable/disable biometric authentication (enabled by default on macOS)
+hc config enable-biometric true
+
+# First unlock: Biometric + master password entry (cached in keyring)
+# Subsequent unlocks: Biometric only (no password needed)
+
+# Biometric authentication required for sensitive operations:
+# - hc get --show/--clip
+# - hc edit
+# - hc rm
+# - hc export
+```
+
+**Supported authentication methods:**
+- Touch ID (MacBook Pro/Air, Magic Keyboard)
+- Face ID (future Mac devices)
+- Apple Watch unlock
+- Passkey
+- macOS login password (fallback)
+
 ### Session Management
 
 ```bash
@@ -274,13 +300,29 @@ hc import backup.json
 
 The derived encryption key is cached in the system keyring to avoid repeated password entry. Sessions automatically expire after the configured timeout (default: 60 minutes).
 
+### Biometric Authentication (macOS)
+
+On macOS, biometric authentication is enabled by default. After the initial setup:
+
+1. **First unlock**: Touch ID/Face ID + master password entry (password cached in keyring)
+2. **Subsequent unlocks**: Touch ID/Face ID only (password retrieved automatically)
+
+Sensitive operations (`get --show`, `edit`, `rm`, `export`) require additional biometric verification for security.
+
+**Security benefits:**
+- No password typing (reduces shoulder surfing risk)
+- Master password stored in macOS keyring with device-level encryption
+- Biometric authentication uses system LocalAuthentication framework
+- Automatic fallback to password if biometric unavailable
+
 ## File Locations
 
 | File | Description |
 |------|-------------|
-| `~/.holecard/config.toml` | Configuration file |
+| `~/.holecard/config.toml` | Configuration file (`enable_biometric`, `vault_path`, `session_timeout_minutes`) |
 | `~/.holecard/vault.enc` | Encrypted vault (default) |
-| `~/.holecard/session.json` | Session metadata |
+| `~/.holecard/session_*.json` | Session metadata |
+| macOS Keychain | Master password (when biometric enabled), secret key, session key |
 
 ## Platform Support
 
@@ -333,6 +375,7 @@ Built with:
 - [argon2](https://github.com/RustCrypto/password-hashes) - Key derivation
 - [aes-gcm](https://github.com/RustCrypto/AEADs) - Authenticated encryption
 - [keyring](https://github.com/hwchen/keyring-rs) - System keyring access
+- [security-framework](https://github.com/kornelski/rust-security-framework) - macOS keychain integration (macOS)
 - [totp-lite](https://github.com/fosskers/totp-lite) - TOTP implementation
 - [sha2](https://github.com/RustCrypto/hashes) - SSH key fingerprint calculation
 - [tempfile](https://github.com/Stebalien/tempfile) - Secure temporary file handling
