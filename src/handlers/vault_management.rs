@@ -82,7 +82,6 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
 
     let crypto = CryptoServiceImpl::new();
 
-    // Reuse existing secret key if available, otherwise generate a new one
     let secret_key = match keyring.load_secret_key() {
         Ok(existing_key) => existing_key,
         Err(_) => {
@@ -105,10 +104,9 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
 
     registry.create_vault(&name, vault_path)?;
 
-    // Save session so subsequent operations don't require re-entering password
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, &name, config.session_timeout_minutes);
-    session.save_session(&derived_key, &salt)?;
+    session.save_session(&derived_key, &salt, Vec::new())?;
 
     println!("\n========================================");
     println!("     Vault '{}' Created Successfully", name);
@@ -300,11 +298,19 @@ fn handle_passwd(
         );
     }
 
+    let entry_names: Vec<String> = ctx
+        .inner
+        .vault
+        .list_entries()
+        .iter()
+        .map(|e| e.name.clone())
+        .collect();
+
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, &vault_name, config.session_timeout_minutes);
 
     let clear_result = session.clear_session();
-    let save_result = session.save_session(&derived_key, &salt);
+    let save_result = session.save_session(&derived_key, &salt, entry_names);
     std::fs::remove_file(&backup_path).ok();
 
     clear_result?;

@@ -89,8 +89,18 @@ impl VaultContext {
                 .load_with_cached_key(vault_path, &derived_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            let session_data = SessionData { derived_key, salt };
-            session.save_session(&derived_key, &salt)?;
+            let entry_names: Vec<String> = vault
+                .list_entries()
+                .iter()
+                .map(|e| e.name.clone())
+                .collect();
+
+            session.save_session(&derived_key, &salt, entry_names.clone())?;
+            let session_data = SessionData {
+                derived_key,
+                salt,
+                entry_names,
+            };
             (vault, session_data)
         };
 
@@ -115,12 +125,23 @@ impl VaultContext {
             )
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
+        let entry_names: Vec<String> = self
+            .vault
+            .list_entries()
+            .iter()
+            .map(|e| e.name.clone())
+            .collect();
+
         let session = SessionManager::new(
             &self.config_dir,
             &self.vault_name,
             self.config.session_timeout_minutes,
         );
-        session.save_session(&self.session_data.derived_key, &self.session_data.salt)?;
+        session.save_session(
+            &self.session_data.derived_key,
+            &self.session_data.salt,
+            entry_names,
+        )?;
 
         Ok(())
     }

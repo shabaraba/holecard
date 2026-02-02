@@ -1,3 +1,4 @@
+pub mod completion;
 pub mod config;
 pub mod inject;
 pub mod password;
