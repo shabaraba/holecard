@@ -3,7 +3,9 @@ use std::path::Path;
 
 use crate::cli::input;
 use crate::domain::Entry;
-use crate::infrastructure::{decrypt_for_import, encrypt_for_export, KeyringManager};
+use crate::infrastructure::{
+    decrypt_for_import, encrypt_for_export, require_biometric_auth, KeyringManager,
+};
 use crate::multi_vault_context::MultiVaultContext;
 
 pub fn handle_export(
@@ -13,6 +15,10 @@ pub fn handle_export(
     config_dir: &Path,
 ) -> Result<()> {
     let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+
+    // Require Touch ID for export operations
+    require_biometric_auth(&ctx.inner.config, "Export entire vault")?;
+
     let entries = ctx.inner.vault.list_entries();
 
     let export_data: Vec<&Entry> = entries.into_iter().collect();
