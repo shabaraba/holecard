@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3](https://github.com/shabaraba/holecard/compare/v0.2.2...v0.2.3) (2026-02-04)
+
+
+### Miscellaneous
+
+* fix binstall URLs and README after crate rename ([#45](https://github.com/shabaraba/holecard/issues/45)) ([727cf29](https://github.com/shabaraba/holecard/commit/727cf29b11ad96cf2f920db50637f65a3da702ff))
+* rename crate from hc to holecard-cli ([#43](https://github.com/shabaraba/holecard/issues/43)) ([3c623ab](https://github.com/shabaraba/holecard/commit/3c623ab375e5c7e00b5168b14b038e423b5bb543))
+
 ## [0.2.2](https://github.com/shabaraba/holecard/compare/v0.2.1...v0.2.2) (2026-02-04)
 
 
