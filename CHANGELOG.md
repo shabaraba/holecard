@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5](https://github.com/shabaraba/holecard/compare/v0.2.4...v0.2.5) (2026-02-04)
+
+
+### Features
+
+* add ssh add command for simplified SSH entry creation ([#49](https://github.com/shabaraba/holecard/issues/49)) ([61728f0](https://github.com/shabaraba/holecard/commit/61728f0f310ab1423098d254d534379e6a65d44b))
+
 ## [0.2.4](https://github.com/shabaraba/holecard/compare/v0.2.3...v0.2.4) (2026-02-04)
 
 
