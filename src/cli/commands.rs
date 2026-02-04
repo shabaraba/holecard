@@ -426,6 +426,33 @@ pub enum VaultCommands {
 
 #[derive(Subcommand)]
 pub enum SshCommands {
+    #[command(about = "Add SSH connection entry")]
+    Add {
+        #[arg(help = "Entry name")]
+        name: String,
+
+        #[arg(long, help = "SSH config alias (mutually exclusive with username/hostname)")]
+        alias: Option<String>,
+
+        #[arg(long, help = "SSH username")]
+        username: Option<String>,
+
+        #[arg(long, help = "SSH hostname")]
+        hostname: Option<String>,
+
+        #[arg(long, help = "SSH password (mutually exclusive with private-key)")]
+        password: Option<String>,
+
+        #[arg(long, help = "Path to private key file (mutually exclusive with password)")]
+        private_key: Option<String>,
+
+        #[arg(long, help = "Path to public key file (optional)")]
+        public_key: Option<String>,
+
+        #[arg(long, help = "Passphrase for private key (optional)")]
+        passphrase: Option<String>,
+    },
+
     #[command(about = "Load SSH key into ssh-agent")]
     Load {
         #[arg(help = "Entry name containing SSH key")]
