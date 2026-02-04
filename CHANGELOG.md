@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6](https://github.com/shabaraba/holecard/compare/v0.2.5...v0.2.6) (2026-02-04)
+
+
+### Bug Fixes
+
+* add debug logging and checkout ref fix for publish workflow ([#51](https://github.com/shabaraba/holecard/issues/51)) ([4db0f0a](https://github.com/shabaraba/holecard/commit/4db0f0a37e5e4a80d28f9b857d27ed44ce6ab551))
+* add workflow_dispatch and created trigger to publish-crates workflow ([#50](https://github.com/shabaraba/holecard/issues/50)) ([1a57fe4](https://github.com/shabaraba/holecard/commit/1a57fe4c2ffa64ec48a7b0d9c89fff13a3a51e55))
+
 ## [0.2.5](https://github.com/shabaraba/holecard/compare/v0.2.4...v0.2.5) (2026-02-04)
 
 
