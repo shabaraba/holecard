@@ -116,17 +116,6 @@ fn handle_ssh_connect(
 
     let entry = ctx.inner.vault.get_entry(&entry_name)?;
 
-    if let Some(private_key) = entry.custom_fields.get("private_key") {
-        validate_private_key(private_key)?;
-
-        let passphrase = entry.custom_fields.get("passphrase").map(|s| s.as_str());
-
-        let agent = SshAgent::connect()?;
-        agent.add_identity(private_key, passphrase, None)?;
-
-        println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
-    }
-
     let ssh_target = if target.contains('@') {
         target.to_string()
     } else {
@@ -138,17 +127,74 @@ fn handle_ssh_connect(
             .context("Entry has no 'host' or 'alias' field and target is not in user@host format")?
     };
 
+    let has_private_key = entry.custom_fields.contains_key("private_key");
+    let has_password = entry.custom_fields.contains_key("password");
+
+    if !has_private_key && !has_password {
+        anyhow::bail!(
+            "Entry '{}' must have either 'private_key' or 'password' field for SSH authentication",
+            entry_name
+        );
+    }
+
     println!("Connecting to {}...", ssh_target);
 
-    let status = Command::new("ssh")
-        .arg(&ssh_target)
-        .args(&ssh_args)
-        .status()
-        .context("Failed to execute ssh command")?;
+    let status = if let Some(password) = entry.custom_fields.get("password") {
+        execute_ssh_with_password(&ssh_target, &ssh_args, password)?
+    } else if let Some(private_key) = entry.custom_fields.get("private_key") {
+        validate_private_key(private_key)?;
+
+        let passphrase = entry.custom_fields.get("passphrase").map(|s| s.as_str());
+
+        let agent = SshAgent::connect()?;
+        agent.add_identity(private_key, passphrase, None)?;
+
+        println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
+
+        Command::new("ssh")
+            .arg(&ssh_target)
+            .args(&ssh_args)
+            .status()
+            .context("Failed to execute ssh command")?
+    } else {
+        unreachable!("Either private_key or password should exist")
+    };
 
     if !status.success() {
         anyhow::bail!("SSH connection failed");
     }
 
     Ok(())
+}
+
+fn execute_ssh_with_password(
+    ssh_target: &str,
+    ssh_args: &[String],
+    password: &str,
+) -> Result<std::process::ExitStatus> {
+    if !is_sshpass_available() {
+        anyhow::bail!(
+            "Password authentication requires 'sshpass' to be installed.\n\
+             Install it with: brew install sshpass (macOS) or apt-get install sshpass (Linux)"
+        );
+    }
+
+    println!("✓ Using password authentication");
+
+    Command::new("sshpass")
+        .arg("-p")
+        .arg(password)
+        .arg("ssh")
+        .arg(ssh_target)
+        .args(ssh_args)
+        .status()
+        .context("Failed to execute sshpass command")
+}
+
+fn is_sshpass_available() -> bool {
+    Command::new("which")
+        .arg("sshpass")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
 }
