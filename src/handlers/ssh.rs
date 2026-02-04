@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 
 use crate::cli::commands::SshCommands;
-use crate::domain::{find_entry_by_name_or_alias, validate_private_key};
+use crate::domain::{find_entry_by_name_or_alias, validate_private_key, Entry};
 use crate::infrastructure::{KeyringManager, SshAgent};
 use crate::multi_vault_context::MultiVaultContext;
 
@@ -14,6 +15,30 @@ pub fn handle_ssh(
     config_dir: &Path,
 ) -> Result<()> {
     match subcommand {
+        SshCommands::Add {
+            name,
+            alias,
+            username,
+            hostname,
+            password,
+            private_key,
+            public_key,
+            passphrase,
+        } => handle_ssh_add(
+            &name,
+            SshAddOptions {
+                alias,
+                username,
+                hostname,
+                password,
+                private_key_path: private_key,
+                public_key_path: public_key,
+                passphrase,
+            },
+            vault_name,
+            keyring,
+            config_dir,
+        ),
         SshCommands::Load { name, lifetime } => {
             handle_ssh_load(&name, lifetime, vault_name, keyring, config_dir)
         }
@@ -22,6 +47,119 @@ pub fn handle_ssh(
         SshCommands::Connect { target, ssh_args } => {
             handle_ssh_connect(&target, ssh_args, vault_name, keyring, config_dir)
         }
+    }
+}
+
+struct SshAddOptions {
+    alias: Option<String>,
+    username: Option<String>,
+    hostname: Option<String>,
+    password: Option<String>,
+    private_key_path: Option<String>,
+    public_key_path: Option<String>,
+    passphrase: Option<String>,
+}
+
+fn handle_ssh_add(
+    name: &str,
+    options: SshAddOptions,
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let SshAddOptions {
+        alias,
+        username,
+        hostname,
+        password,
+        private_key_path,
+        public_key_path,
+        passphrase,
+    } = options;
+    // Validation: --alias is mutually exclusive with other options
+    if alias.is_some() && (username.is_some() || hostname.is_some() || password.is_some() || private_key_path.is_some()) {
+        anyhow::bail!(
+            "Option --alias cannot be used with --username, --hostname, --password, or --private-key.\n\
+             When using --alias, the SSH connection details are managed by ~/.ssh/config."
+        );
+    }
+
+    // Validation: --password and --private-key are mutually exclusive
+    if password.is_some() && private_key_path.is_some() {
+        anyhow::bail!(
+            "Options --password and --private-key are mutually exclusive.\n\
+             Use --password for password authentication or --private-key for key-based authentication."
+        );
+    }
+
+    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let mut custom_fields = HashMap::new();
+
+    if let Some(alias_value) = alias {
+        // Pattern 1: Alias only (SSH config managed)
+        custom_fields.insert("alias".to_string(), alias_value);
+        println!("✓ SSH entry '{}' created with alias authentication", name);
+    } else {
+        // Pattern 2 & 3: Direct management (username + hostname required)
+        let username_value = username.context(
+            "Option --username is required when not using --alias"
+        )?;
+        let hostname_value = hostname.context(
+            "Option --hostname is required when not using --alias"
+        )?;
+
+        custom_fields.insert("username".to_string(), username_value.clone());
+        custom_fields.insert("hostname".to_string(), hostname_value.clone());
+        custom_fields.insert("host".to_string(), format!("{}@{}", username_value, hostname_value));
+
+        if let Some(password_value) = password {
+            // Pattern 2: Password authentication
+            custom_fields.insert("password".to_string(), password_value);
+            println!("✓ SSH entry '{}' created with password authentication", name);
+        } else if let Some(private_key_path_value) = private_key_path {
+            // Pattern 3: Key authentication
+            let expanded_private_key_path = expand_tilde(&private_key_path_value)?;
+            let private_key_content = std::fs::read_to_string(&expanded_private_key_path)
+                .with_context(|| format!("Failed to read private key file: {}", expanded_private_key_path))?;
+
+            validate_private_key(&private_key_content)?;
+            custom_fields.insert("private_key".to_string(), private_key_content);
+
+            if let Some(public_key_path_value) = public_key_path {
+                let expanded_public_key_path = expand_tilde(&public_key_path_value)?;
+                let public_key_content = std::fs::read_to_string(&expanded_public_key_path)
+                    .with_context(|| format!("Failed to read public key file: {}", expanded_public_key_path))?;
+                custom_fields.insert("public_key".to_string(), public_key_content);
+            }
+
+            if let Some(passphrase_value) = passphrase {
+                custom_fields.insert("passphrase".to_string(), passphrase_value);
+            }
+
+            println!("✓ SSH entry '{}' created with key authentication", name);
+        } else {
+            anyhow::bail!(
+                "Either --password or --private-key is required when not using --alias"
+            );
+        }
+    }
+
+    let entry = Entry::new(name.to_string(), custom_fields, None);
+    ctx.inner.vault.add_entry(entry)?;
+    ctx.save()?;
+
+    println!("✓ Entry '{}' saved to vault", name);
+
+    Ok(())
+}
+
+fn expand_tilde(path: &str) -> Result<String> {
+    if path.starts_with('~') {
+        let home = std::env::var("HOME")
+            .context("HOME environment variable not set")?;
+        Ok(path.replacen('~', &home, 1))
+    } else {
+        Ok(path.to_string())
     }
 }
 
