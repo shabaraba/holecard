@@ -46,15 +46,15 @@ tempfile = "3.0"
 security-framework = "2.11"
 
 [package.metadata.binstall]
-pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.tar.gz"
+pkg-url = "{ repo }/releases/download/v{ version }/hc-{ target }.tar.gz"
 bin-dir = "{ bin }{ binary-ext }"
 pkg-fmt = "tgz"
 
 [package.metadata.binstall.overrides.aarch64-apple-darwin]
-pkg-url = "{ repo }/releases/download/v{ version }/{ name }-aarch64-apple-darwin.tar.gz"
+pkg-url = "{ repo }/releases/download/v{ version }/hc-aarch64-apple-darwin.tar.gz"
 
 [package.metadata.binstall.overrides.x86_64-unknown-linux-gnu]
-pkg-url = "{ repo }/releases/download/v{ version }/{ name }-x86_64-unknown-linux-gnu.tar.gz"
+pkg-url = "{ repo }/releases/download/v{ version }/hc-x86_64-unknown-linux-gnu.tar.gz"
 
 [profile.release]
 opt-level = 3

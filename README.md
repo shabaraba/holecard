@@ -30,10 +30,10 @@ cargo build --release
 cp target/release/hc /usr/local/bin/  # or ~/.local/bin/
 ```
 
-### From crates.io (coming soon)
+### From crates.io
 
 ```bash
-cargo install hc
+cargo install holecard-cli
 ```
 
 ### From binary releases (coming soon)
@@ -55,7 +55,7 @@ brew install hc
 ### With cargo-binstall (coming soon)
 
 ```bash
-cargo binstall hc
+cargo binstall holecard-cli
 ```
 
 ## Quick Start
