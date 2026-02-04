@@ -12,8 +12,17 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Debug - Print event info
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Ref name: ${{ github.ref_name }}"
+          echo "SHA: ${{ github.sha }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
