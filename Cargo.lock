@@ -1044,37 +1044,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 
 [[package]]
-name = "hc"
-version = "0.2.2"
-dependencies = [
- "aes-gcm",
- "anyhow",
- "argon2",
- "base32",
- "base64 0.22.1",
- "chrono",
- "clap",
- "clap_complete",
- "copypasta",
- "dialoguer",
- "dirs",
- "keyring",
- "rand",
- "regex",
- "reqwest",
- "security-framework",
- "serde",
- "serde_json",
- "sha2",
- "sodiumoxide",
- "tempfile",
- "thiserror 1.0.69",
- "toml",
- "totp-lite",
- "zeroize",
-]
-
-[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1114,6 +1083,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest",
+]
+
+[[package]]
+name = "holecard-cli"
+version = "0.2.2"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "argon2",
+ "base32",
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "copypasta",
+ "dialoguer",
+ "dirs",
+ "keyring",
+ "rand",
+ "regex",
+ "reqwest",
+ "security-framework",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sodiumoxide",
+ "tempfile",
+ "thiserror 1.0.69",
+ "toml",
+ "totp-lite",
+ "zeroize",
 ]
 
 [[package]]
