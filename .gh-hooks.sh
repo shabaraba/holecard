@@ -37,6 +37,15 @@ gh_hook_release_pr_merged() {
   local version="$1"
 
   echo "✓ Release PR merged for version ${version}"
+
+  # 最新のコードをpullしてCargo.tomlを更新
+  echo "→ Pulling latest changes..."
+  if git pull origin main; then
+    echo "✓ Successfully pulled latest changes"
+  else
+    echo "✗ Failed to pull latest changes"
+  fi
+
   echo "→ Publishing to crates.io..."
 
   # crates.ioへpublish
