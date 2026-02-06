@@ -67,21 +67,6 @@ impl SshAgent {
         check_ssh_add_output(&output, "remove")?;
         Ok(())
     }
-
-    pub fn list_identities(&self) -> Result<Vec<String>> {
-        let output = run_ssh_add(&["-l"])?;
-
-        if output.status.code() == Some(1) {
-            return Ok(vec![]);
-        }
-
-        if !output.status.success() {
-            bail!("Failed to list SSH keys");
-        }
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        Ok(stdout.lines().map(|s| s.to_string()).collect())
-    }
 }
 
 fn run_ssh_add(args: &[&str]) -> Result<Output> {

@@ -43,7 +43,7 @@ pub fn handle_ssh(
             handle_ssh_load(&name, lifetime, vault_name, keyring, config_dir)
         }
         SshCommands::Unload { name } => handle_ssh_unload(&name, vault_name, keyring, config_dir),
-        SshCommands::List => handle_ssh_list(),
+        SshCommands::List => handle_ssh_list(vault_name, keyring, config_dir),
         SshCommands::Connect { target, ssh_args } => {
             handle_ssh_connect(&target, ssh_args, vault_name, keyring, config_dir)
         }
@@ -224,20 +224,63 @@ fn handle_ssh_unload(
     Ok(())
 }
 
-fn handle_ssh_list() -> Result<()> {
-    let agent = SshAgent::connect()?;
-    let keys = agent.list_identities()?;
+fn handle_ssh_list(
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let entries = ctx.inner.vault.list_entries();
 
-    if keys.is_empty() {
-        println!("No SSH keys loaded in ssh-agent");
+    let ssh_entries: Vec<_> = entries
+        .iter()
+        .filter(|entry| is_ssh_entry(entry))
+        .collect();
+
+    if ssh_entries.is_empty() {
+        println!("No SSH entries found in vault");
     } else {
-        println!("\nLoaded SSH keys:\n");
-        for key in keys {
-            println!("  {}", key);
+        println!("\nSSH Entries:\n");
+        for entry in ssh_entries {
+            let auth_type = get_auth_type(entry);
+            let target = get_ssh_target(entry);
+            println!("  {} ({})", entry.name, auth_type);
+            if let Some(t) = target {
+                println!("    → {}", t);
+            }
         }
     }
 
     Ok(())
+}
+
+fn is_ssh_entry(entry: &Entry) -> bool {
+    entry.custom_fields.contains_key("alias")
+        || entry.custom_fields.contains_key("private_key")
+        || (entry.custom_fields.contains_key("username")
+            && entry.custom_fields.contains_key("hostname"))
+}
+
+fn get_auth_type(entry: &Entry) -> &str {
+    if entry.custom_fields.contains_key("alias") {
+        "alias"
+    } else if entry.custom_fields.contains_key("private_key") {
+        "key"
+    } else if entry.custom_fields.contains_key("password") {
+        "password"
+    } else {
+        "unknown"
+    }
+}
+
+fn get_ssh_target(entry: &Entry) -> Option<String> {
+    if let Some(alias) = entry.custom_fields.get("alias") {
+        Some(format!("alias: {}", alias))
+    } else if let Some(host) = entry.custom_fields.get("host") {
+        Some(host.clone())
+    } else {
+        None
+    }
 }
 
 fn handle_ssh_connect(
