@@ -43,7 +43,7 @@ pub fn handle_ssh(
             handle_ssh_load(&name, lifetime, vault_name, keyring, config_dir)
         }
         SshCommands::Unload { name } => handle_ssh_unload(&name, vault_name, keyring, config_dir),
-        SshCommands::List => handle_ssh_list(),
+        SshCommands::List => handle_ssh_list(vault_name, keyring, config_dir),
         SshCommands::Connect { target, ssh_args } => {
             handle_ssh_connect(&target, ssh_args, vault_name, keyring, config_dir)
         }
@@ -77,7 +77,12 @@ fn handle_ssh_add(
         passphrase,
     } = options;
     // Validation: --alias is mutually exclusive with other options
-    if alias.is_some() && (username.is_some() || hostname.is_some() || password.is_some() || private_key_path.is_some()) {
+    if alias.is_some()
+        && (username.is_some()
+            || hostname.is_some()
+            || password.is_some()
+            || private_key_path.is_some())
+    {
         anyhow::bail!(
             "Option --alias cannot be used with --username, --hostname, --password, or --private-key.\n\
              When using --alias, the SSH connection details are managed by ~/.ssh/config."
@@ -101,26 +106,35 @@ fn handle_ssh_add(
         println!("✓ SSH entry '{}' created with alias authentication", name);
     } else {
         // Pattern 2 & 3: Direct management (username + hostname required)
-        let username_value = username.context(
-            "Option --username is required when not using --alias"
-        )?;
-        let hostname_value = hostname.context(
-            "Option --hostname is required when not using --alias"
-        )?;
+        let username_value =
+            username.context("Option --username is required when not using --alias")?;
+        let hostname_value =
+            hostname.context("Option --hostname is required when not using --alias")?;
 
         custom_fields.insert("username".to_string(), username_value.clone());
         custom_fields.insert("hostname".to_string(), hostname_value.clone());
-        custom_fields.insert("host".to_string(), format!("{}@{}", username_value, hostname_value));
+        custom_fields.insert(
+            "host".to_string(),
+            format!("{}@{}", username_value, hostname_value),
+        );
 
         if let Some(password_value) = password {
             // Pattern 2: Password authentication
             custom_fields.insert("password".to_string(), password_value);
-            println!("✓ SSH entry '{}' created with password authentication", name);
+            println!(
+                "✓ SSH entry '{}' created with password authentication",
+                name
+            );
         } else if let Some(private_key_path_value) = private_key_path {
             // Pattern 3: Key authentication
             let expanded_private_key_path = expand_tilde(&private_key_path_value)?;
             let private_key_content = std::fs::read_to_string(&expanded_private_key_path)
-                .with_context(|| format!("Failed to read private key file: {}", expanded_private_key_path))?;
+                .with_context(|| {
+                    format!(
+                        "Failed to read private key file: {}",
+                        expanded_private_key_path
+                    )
+                })?;
 
             validate_private_key(&private_key_content)?;
             custom_fields.insert("private_key".to_string(), private_key_content);
@@ -128,7 +142,12 @@ fn handle_ssh_add(
             if let Some(public_key_path_value) = public_key_path {
                 let expanded_public_key_path = expand_tilde(&public_key_path_value)?;
                 let public_key_content = std::fs::read_to_string(&expanded_public_key_path)
-                    .with_context(|| format!("Failed to read public key file: {}", expanded_public_key_path))?;
+                    .with_context(|| {
+                        format!(
+                            "Failed to read public key file: {}",
+                            expanded_public_key_path
+                        )
+                    })?;
                 custom_fields.insert("public_key".to_string(), public_key_content);
             }
 
@@ -138,9 +157,7 @@ fn handle_ssh_add(
 
             println!("✓ SSH entry '{}' created with key authentication", name);
         } else {
-            anyhow::bail!(
-                "Either --password or --private-key is required when not using --alias"
-            );
+            anyhow::bail!("Either --password or --private-key is required when not using --alias");
         }
     }
 
@@ -155,8 +172,7 @@ fn handle_ssh_add(
 
 fn expand_tilde(path: &str) -> Result<String> {
     if path.starts_with('~') {
-        let home = std::env::var("HOME")
-            .context("HOME environment variable not set")?;
+        let home = std::env::var("HOME").context("HOME environment variable not set")?;
         Ok(path.replacen('~', &home, 1))
     } else {
         Ok(path.to_string())
@@ -224,20 +240,58 @@ fn handle_ssh_unload(
     Ok(())
 }
 
-fn handle_ssh_list() -> Result<()> {
-    let agent = SshAgent::connect()?;
-    let keys = agent.list_identities()?;
+fn handle_ssh_list(
+    vault_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let entries = ctx.inner.vault.list_entries();
 
-    if keys.is_empty() {
-        println!("No SSH keys loaded in ssh-agent");
+    let ssh_entries: Vec<_> = entries.iter().filter(|entry| is_ssh_entry(entry)).collect();
+
+    if ssh_entries.is_empty() {
+        println!("No SSH entries found in vault");
     } else {
-        println!("\nLoaded SSH keys:\n");
-        for key in keys {
-            println!("  {}", key);
+        println!("\nSSH Entries:\n");
+        for entry in ssh_entries {
+            let auth_type = get_auth_type(entry);
+            let target = get_ssh_target(entry);
+            println!("  {} ({})", entry.name, auth_type);
+            if let Some(t) = target {
+                println!("    → {}", t);
+            }
         }
     }
 
     Ok(())
+}
+
+fn is_ssh_entry(entry: &Entry) -> bool {
+    entry.custom_fields.contains_key("alias")
+        || entry.custom_fields.contains_key("private_key")
+        || (entry.custom_fields.contains_key("username")
+            && entry.custom_fields.contains_key("hostname"))
+}
+
+fn get_auth_type(entry: &Entry) -> &str {
+    if entry.custom_fields.contains_key("alias") {
+        "alias"
+    } else if entry.custom_fields.contains_key("private_key") {
+        "key"
+    } else if entry.custom_fields.contains_key("password") {
+        "password"
+    } else {
+        "unknown"
+    }
+}
+
+fn get_ssh_target(entry: &Entry) -> Option<String> {
+    if let Some(alias) = entry.custom_fields.get("alias") {
+        Some(format!("alias: {}", alias))
+    } else {
+        entry.custom_fields.get("host").cloned()
+    }
 }
 
 fn handle_ssh_connect(
