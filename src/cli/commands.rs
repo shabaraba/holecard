@@ -431,7 +431,10 @@ pub enum SshCommands {
         #[arg(help = "Entry name")]
         name: String,
 
-        #[arg(long, help = "SSH config alias (mutually exclusive with username/hostname)")]
+        #[arg(
+            long,
+            help = "SSH config alias (mutually exclusive with username/hostname)"
+        )]
         alias: Option<String>,
 
         #[arg(long, help = "SSH username")]
@@ -443,7 +446,10 @@ pub enum SshCommands {
         #[arg(long, help = "SSH password (mutually exclusive with private-key)")]
         password: Option<String>,
 
-        #[arg(long, help = "Path to private key file (mutually exclusive with password)")]
+        #[arg(
+            long,
+            help = "Path to private key file (mutually exclusive with password)"
+        )]
         private_key: Option<String>,
 
         #[arg(long, help = "Path to public key file (optional)")]
