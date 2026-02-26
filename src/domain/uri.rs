@@ -3,7 +3,7 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 static URI_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^hc://(?:([^/]+)/)?([^/]+)/(.+)$").expect("Failed to compile URI regex")
+    Regex::new(r"^(?:hc|op)://(?:([^/]+)/)?([^/]+)/(.+)$").expect("Failed to compile URI regex")
 });
 
 static ENV_VAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
@@ -21,8 +21,8 @@ impl SecretUri {
     pub fn parse(uri: &str) -> Result<Self> {
         let uri = uri.trim();
 
-        if !uri.starts_with("hc://") {
-            anyhow::bail!("Invalid URI scheme. Expected 'hc://', got: {}", uri);
+        if !uri.starts_with("hc://") && !uri.starts_with("op://") {
+            anyhow::bail!("Invalid URI scheme. Expected 'hc://' or 'op://', got: {}", uri);
         }
 
         let caps = URI_REGEX
@@ -45,7 +45,8 @@ impl SecretUri {
 
     #[allow(dead_code)]
     pub fn is_uri(s: &str) -> bool {
-        s.trim().starts_with("hc://")
+        let trimmed = s.trim();
+        trimmed.starts_with("hc://") || trimmed.starts_with("op://")
     }
 
     pub fn expand_env_vars(value: &str) -> String {
@@ -135,5 +136,20 @@ mod tests {
         std::env::remove_var("MISSING");
         let result = SecretUri::expand_env_vars("hc://${MISSING}/item/field");
         assert_eq!(result, "hc://${MISSING}/item/field");
+    }
+
+    #[test]
+    fn test_parse_op_scheme_compatibility() {
+        // op:// should also work (1Password compatibility)
+        let uri = SecretUri::parse("op://production/database/password").unwrap();
+        assert_eq!(uri.vault, Some("production".to_string()));
+        assert_eq!(uri.item, "database");
+        assert_eq!(uri.field, "password");
+    }
+
+    #[test]
+    fn test_is_uri_op_scheme() {
+        assert!(SecretUri::is_uri("op://vault/item/field"));
+        assert!(SecretUri::is_uri("  op://vault/item/field  "));
     }
 }

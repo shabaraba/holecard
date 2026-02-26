@@ -8,7 +8,7 @@ use crate::infrastructure::KeyringManager;
 use crate::multi_vault_context::MultiVaultContext;
 
 static TEMPLATE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\{\{\s*(hc://[^}]+)\s*\}\}").expect("Failed to compile template regex")
+    Regex::new(r"(?:hc|op)://(?:[^/]+/)?[^/\s]+/[^\s]+").expect("Failed to compile template regex")
 });
 
 pub struct SecretResolver;
@@ -48,7 +48,7 @@ impl SecretResolver {
 
         for cap in TEMPLATE_REGEX.captures_iter(template) {
             let full_match = cap.get(0).unwrap();
-            let uri_str = cap[1].trim();
+            let uri_str = full_match.as_str().trim();
 
             match Self::resolve(uri_str, default_vault, keyring, config_dir) {
                 Ok(value) => {
@@ -73,7 +73,7 @@ impl SecretResolver {
     }
 
     pub fn has_uri_references(text: &str) -> bool {
-        text.contains("hc://")
+        text.contains("hc://") || text.contains("op://")
     }
 }
 
@@ -83,11 +83,12 @@ mod tests {
 
     #[test]
     fn test_has_uri_references() {
-        assert!(SecretResolver::has_uri_references(
-            "{{ hc://vault/item/field }}"
-        ));
         assert!(SecretResolver::has_uri_references("hc://vault/item/field"));
+        assert!(SecretResolver::has_uri_references("op://vault/item/field"));
+        assert!(SecretResolver::has_uri_references(
+            "password: hc://prod/db/password"
+        ));
         assert!(!SecretResolver::has_uri_references("plain text"));
-        assert!(!SecretResolver::has_uri_references("{{ entry.field }}"));
+        assert!(!SecretResolver::has_uri_references("http://example.com"));
     }
 }

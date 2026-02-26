@@ -155,7 +155,47 @@ hc config session-timeout 30
 
 ## 🎯 Advanced Features
 
-### Template Injection
+### URI-Based Secret Injection (1Password Compatible)
+
+Inject secrets into config files using `hc://` or `op://` URI references:
+
+```bash
+# Create a template config file
+cat > config.yaml << EOF
+database:
+  host: localhost
+  username: hc://prod/db/username
+  password: hc://prod/db/password
+api:
+  key: op://prod/api/secret_key
+EOF
+
+# Inject secrets (supports both hc:// and op:// URIs)
+hc inject -i config.yaml -o config.prod.yaml
+
+# Or from stdin
+cat config.yaml | hc inject -i - > config.prod.yaml
+```
+
+**URI Format**: `hc://[vault/]item/field` or `op://[vault/]item/field`
+
+### Environment Variables with URIs
+
+Run commands with secrets from URI references:
+
+```bash
+# Use hc:// or op:// URIs
+hc run \
+  --env DB_URL=hc://prod/db/connection_string \
+  --env API_KEY=op://prod/api/key \
+  -- python app.py
+
+# Supports environment variable substitution
+export VAULT=production
+hc run --env DB_PASS=hc://${VAULT}/db/password -- ./deploy.sh
+```
+
+### Legacy Template Injection
 
 Render templates with entry fields:
 
@@ -164,9 +204,9 @@ hc inject github "https://{{username}}:{{password}}@github.com"
 hc inject aws "AWS_ACCESS_KEY={{access_key}}"
 ```
 
-### Environment Variables
+### Legacy Environment Variables
 
-Run commands with secrets as environment variables:
+Run commands with entry-based environment variables:
 
 ```bash
 # Entry fields become uppercase env vars
