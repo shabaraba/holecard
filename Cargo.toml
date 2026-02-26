@@ -10,7 +10,7 @@ repository = "https://github.com/shabarba/holecard"
 license = "MIT OR Apache-2.0"
 keywords = ["password-manager", "cli", "security", "encryption", "totp"]
 categories = ["command-line-utilities", "cryptography"]
-exclude = [".github/", ".vibing/", "*.md"]
+exclude = [".github/", ".vibing/", ".worktrees/", "*.png"]
 
 [[bin]]
 name = "hc"

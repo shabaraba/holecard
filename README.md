@@ -1,240 +1,144 @@
 # Holecard
 
-Secure CLI password manager with dual-key encryption.
+[![Crates.io](https://img.shields.io/crates/v/holecard-cli.svg)](https://crates.io/crates/holecard-cli)
+[![License](https://img.shields.io/crates/l/holecard-cli.svg)](https://github.com/shabarba/holecard#license)
+[![CI](https://github.com/shabarba/holecard/actions/workflows/ci.yml/badge.svg)](https://github.com/shabarba/holecard/actions)
 
-## Features
+A secure CLI password manager with dual-key encryption, TOTP support, and SSH key management.
 
-- **Dual-key encryption**: Master password + secret key for enhanced security
-- **Strong cryptography**: Argon2id key derivation + AES-256-GCM encryption
-- **System keyring integration**: Secret key stored securely in OS keyring
-- **Biometric authentication**: Touch ID, Face ID, Apple Watch, Passkey support on macOS 🆕
-- **Session caching**: Avoid repeated password entry with configurable timeout
-- **Flexible entries**: Custom key-value fields per entry
-- **SSH key management**: Store and manage SSH keys with ssh-agent integration
-- **SSH wrapper**: Auto-load keys and connect with aliases (`hc ssh connect git@github.com`)
-- **File loading**: Load fields directly from files with `--file` option
-- **TOTP support**: Dedicated TOTP entry for 2FA code generation with auto-clipboard copy
-- **Smart clipboard**: Copy specific fields with auto-clear after 30 seconds
-- **Template injection**: Render templates with entry fields
-- **Environment variables**: Run commands with secrets as env vars
-- **Vault reinitialization**: Safe vault reset with confirmation prompt
+## ✨ Features
 
-## Installation
+- **🔐 Dual-key encryption** - Master password + secret key for enhanced security
+- **💪 Strong cryptography** - Argon2id key derivation + AES-256-GCM encryption
+- **🔑 System keyring integration** - Secure storage with macOS/Linux keychain
+- **📱 TOTP support** - Generate 2FA codes with auto-clipboard copy
+- **🔌 SSH key management** - Store and manage SSH keys with ssh-agent integration
+- **🍎 Biometric authentication** - Touch ID, Face ID, Apple Watch support on macOS
+- **⚡ Session caching** - Avoid repeated password entry with configurable timeout
 
-### From source (recommended)
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/shabarba/holecard
-cd holecard
-cargo build --release
-cp target/release/hc /usr/local/bin/  # or ~/.local/bin/
-```
-
-### From crates.io
-
-```bash
+# Install from crates.io
 cargo install holecard-cli
-```
 
-### From binary releases (coming soon)
-
-Download pre-built binaries from [GitHub Releases](https://github.com/shabarba/holecard/releases).
-
-**Supported platforms:**
-- macOS Apple Silicon (aarch64)
-- macOS Intel (x86_64)
-- Linux x86_64
-
-### With Homebrew (coming soon)
-
-```bash
-brew tap shabarba/tap
-brew install hc
-```
-
-### With cargo-binstall (coming soon)
-
-```bash
-cargo binstall holecard-cli
-```
-
-## Quick Start
-
-```bash
-# Initialize vault (creates master password + secret key + totp entry)
+# Initialize vault
 hc init
 
 # Add an entry
 hc add github -f username=myuser -f password=mypass
-
-# Or add interactively
-hc add
-
-# Add SSH key from file
-hc add github-key --file private_key=~/.ssh/id_ed25519 -f alias="git@github.com"
-
-# Connect via SSH (auto-loads key)
-hc ssh connect git@github.com
-
-# List entries
-hc list
 
 # Get an entry
 hc get github
 
 # Copy password to clipboard (auto-clears after 30s)
 hc get github -c
-
-# Copy specific field
-hc get github -c username
-
-# Add TOTP secret
-hc totp add github JBSWY3DPEHPK3PXP
-
-# Get TOTP code (displays + copies to clipboard)
-hc totp get github
 ```
 
-## Usage
+## 📦 Installation
 
-### Managing Entries
+### From crates.io (Recommended)
+
+```bash
+cargo install holecard-cli
+```
+
+### From source
+
+```bash
+git clone https://github.com/shabarba/holecard
+cd holecard
+cargo install --path .
+```
+
+### From binary releases
+
+Download pre-built binaries from [GitHub Releases](https://github.com/shabarba/holecard/releases).
+
+**macOS (Apple Silicon):**
+```bash
+curl -LO https://github.com/shabarba/holecard/releases/latest/download/hc-aarch64-apple-darwin.tar.gz
+tar xzf hc-aarch64-apple-darwin.tar.gz
+sudo mv hc /usr/local/bin/
+```
+
+**Linux (x86_64):**
+```bash
+curl -LO https://github.com/shabarba/holecard/releases/latest/download/hc-x86_64-unknown-linux-gnu.tar.gz
+tar xzf hc-x86_64-unknown-linux-gnu.tar.gz
+sudo mv hc /usr/local/bin/
+```
+
+### With cargo-binstall
+
+```bash
+cargo binstall holecard-cli
+```
+
+## 📖 Basic Usage
+
+### Managing Passwords
 
 ```bash
 # Add entry with custom fields
 hc add aws -f access_key=AKIA... -f secret_key=...
 
-# Add entry with fields from files
-hc add github-key \
-  --file private_key=~/.ssh/id_ed25519 \
-  --file public_key=~/.ssh/id_ed25519.pub \
-  -f alias="git@github.com"
+# Add entry interactively
+hc add
 
-# Edit existing entry
+# List all entries
+hc list
+
+# Get entry details
+hc get github
+
+# Copy specific field to clipboard
+hc get github -c password
+hc get github -c username
+
+# Edit entry
 hc edit github -f password=newpass
-
-# Edit with file field
-hc edit github-key --file private_key=~/.ssh/id_rsa
 
 # Remove entry
 hc rm github
+```
 
-# Copy specific field to clipboard
-hc get github -c password    # Copy password field
-hc get github -c username    # Copy username field
-hc get github -c             # Copy password field (or first field if no password)
+### TOTP (Two-Factor Authentication)
 
-# Export vault to JSON (plaintext - handle with care)
-hc export backup.json
+```bash
+# Add TOTP secret
+hc totp add github JBSWY3DPEHPK3PXP
 
-# Import from JSON
-hc import backup.json
-hc import backup.json --overwrite  # Replace existing entries
+# Get TOTP code (displays + copies to clipboard)
+hc totp get github
+# Output: TOTP Code: 123456 (valid for 28 seconds)
+
+# Remove TOTP secret
+hc totp rm github
 ```
 
 ### SSH Key Management
 
-Securely store SSH keys and manage ssh-agent with seamless integration.
-
 ```bash
-# Add SSH key from file (recommended - preserves newlines)
+# Add SSH key from file
 hc add my-server \
   --file private_key=~/.ssh/id_rsa \
-  -f alias="user@server.com,prod" \
+  -f alias="user@server.com" \
   -f passphrase="optional"
 
 # Connect via SSH (auto-loads key)
 hc ssh connect user@server.com
-hc ssh connect prod
 hc ssh connect my-server
 
 # Pass additional SSH arguments
 hc ssh connect prod -- -p 2222 -v
 
-# Manually load key into ssh-agent
-hc ssh load my-server
-
-# Load with lifetime (auto-expires after 8 hours)
-hc ssh load my-server --lifetime 28800
-
-# List loaded keys in ssh-agent
+# List loaded keys
 hc ssh list
 
 # Unload key from ssh-agent
 hc ssh unload my-server
 ```
-
-**Why use `hc ssh` over plain `ssh-add`?**
-- Store encrypted SSH keys in vault with Argon2id + AES-256-GCM
-- Auto-load keys on connect with aliases (`git@github.com` → Entry name)
-- Manage passphrases securely without typing them repeatedly
-- Integrate with session management (`hc lock` clears both vault and ssh-agent)
-
-### TOTP Support
-
-All TOTP secrets are stored in a dedicated `totp` entry that is automatically created during initialization.
-
-```bash
-# Add TOTP secret for a service
-hc totp add github JBSWY3DPEHPK3PXP
-hc totp add aws KBSWY3DPEHPK3PXQ
-
-# Get TOTP code (displays + copies to clipboard)
-hc totp get github
-# Output:
-# TOTP Code: 123456 (valid for 28 seconds)
-# ✓ Copied to clipboard (will clear in 30 seconds)
-
-# Remove TOTP secret
-hc totp rm github
-
-# View all TOTP services
-hc get totp
-```
-
-### Template Injection
-
-```bash
-# Render template with entry fields
-hc inject github "https://{{username}}:{{password}}@github.com"
-
-# Access specific fields
-hc inject aws "AWS_ACCESS_KEY={{access_key}}"
-```
-
-### Running Commands with Secrets
-
-```bash
-# Entry fields become uppercase environment variables
-hc run aws -- env | grep -E "^(ACCESS_KEY|SECRET_KEY)"
-
-# Use with any command
-hc run database -- psql -h localhost -U $USERNAME -d mydb
-```
-
-### Biometric Authentication (macOS only)
-
-Touch ID, Face ID, Apple Watch, and Passkey authentication for seamless vault access.
-
-```bash
-# Enable/disable biometric authentication (enabled by default on macOS)
-hc config enable-biometric true
-
-# First unlock: Biometric + master password entry (cached in keyring)
-# Subsequent unlocks: Biometric only (no password needed)
-
-# Biometric authentication required for sensitive operations:
-# - hc get --show/--clip
-# - hc edit
-# - hc rm
-# - hc export
-```
-
-**Supported authentication methods:**
-- Touch ID (MacBook Pro/Air, Magic Keyboard)
-- Face ID (future Mac devices)
-- Apple Watch unlock
-- Passkey
-- macOS login password (fallback)
 
 ### Session Management
 
@@ -249,90 +153,83 @@ hc lock
 hc config session-timeout 30
 ```
 
-### Configuration
+## 🎯 Advanced Features
+
+### Template Injection
+
+Render templates with entry fields:
 
 ```bash
-# View current config
-hc config
-
-# Set vault file path
-hc config vault-path ~/Dropbox/vault.enc
-
-# Set session timeout
-hc config session-timeout 120
-
-# Reinitialize vault (WARNING: deletes all data)
-hc init
-# Output:
-# ⚠ Vault already exists!
-# ⚠ Vault already exists. Reinitialize? This will DELETE ALL existing data! (y/N):
+hc inject github "https://{{username}}:{{password}}@github.com"
+hc inject aws "AWS_ACCESS_KEY={{access_key}}"
 ```
 
-## Security
+### Environment Variables
+
+Run commands with secrets as environment variables:
+
+```bash
+# Entry fields become uppercase env vars
+hc run aws -- env | grep -E "^(ACCESS_KEY|SECRET_KEY)"
+hc run database -- psql -h localhost -U $USERNAME -d mydb
+```
+
+### Import/Export
+
+```bash
+# Export vault to encrypted JSON
+hc export backup.json
+
+# Import from encrypted JSON
+hc import backup.json
+hc import backup.json --overwrite  # Replace existing entries
+```
+
+### Biometric Authentication (macOS)
+
+Touch ID, Face ID, and Apple Watch authentication:
+
+```bash
+# Enable/disable biometric auth (enabled by default on macOS)
+hc config enable-biometric true
+
+# After initial setup:
+# - First unlock: Biometric + master password
+# - Subsequent unlocks: Biometric only
+```
+
+## 📚 Documentation
+
+- [Security Guide](docs/SECURITY.md) - Encryption details and security model
+- [SSH Key Management](docs/SSH.md) - Comprehensive SSH integration guide
+- [Multi-Vault Support](docs/MULTI_VAULT.md) - Managing multiple vaults
+- [Distribution Guide](DISTRIBUTION.md) - Release and distribution process
+
+## 🔒 Security
 
 ### Encryption
 
-- **Key derivation**: Argon2id with master password + secret key
+- **Key derivation**: Argon2id (19MB memory, 2 iterations) with master password + secret key
 - **Encryption**: AES-256-GCM with random nonce per save
 - **Secret key**: 160-bit random key stored in system keyring
-
-### Backup and Recovery
-
-Use `hc export` to backup your entire vault:
-
-```bash
-hc export backup.json
-```
-
-The export file is encrypted with a password you choose. To restore:
-
-```bash
-hc import backup.json
-```
-
-**Important**:
-- Store export files in a secure location (external drive, encrypted cloud storage, etc.)
-- Use a strong password for export encryption
-- You need BOTH the export file and its password to restore your vault
-- Regular backups protect against data loss
 
 ### Session Caching
 
 The derived encryption key is cached in the system keyring to avoid repeated password entry. Sessions automatically expire after the configured timeout (default: 60 minutes).
 
-### Biometric Authentication (macOS)
+### Backup and Recovery
 
-On macOS, biometric authentication is enabled by default. After the initial setup:
-
-1. **First unlock**: Touch ID/Face ID + master password entry (password cached in keyring)
-2. **Subsequent unlocks**: Touch ID/Face ID only (password retrieved automatically)
-
-Sensitive operations (`get --show`, `edit`, `rm`, `export`) require additional biometric verification for security.
-
-**Security benefits:**
-- No password typing (reduces shoulder surfing risk)
-- Master password stored in macOS keyring with device-level encryption
-- Biometric authentication uses system LocalAuthentication framework
-- Automatic fallback to password if biometric unavailable
-
-## File Locations
-
-| File | Description |
-|------|-------------|
-| `~/.holecard/config.toml` | Configuration file (`enable_biometric`, `vault_path`, `session_timeout_minutes`) |
-| `~/.holecard/vault.enc` | Encrypted vault (default) |
-| `~/.holecard/session_*.json` | Session metadata |
-| macOS Keychain | Master password (when biometric enabled), secret key, session key |
-
-## Platform Support
-
-- **macOS**: Apple Silicon (aarch64) and Intel (x86_64)
-- **Linux**: x86_64 GNU
-
-## Building from Source
+Use `hc export` to backup your vault:
 
 ```bash
-# Clone repository
+hc export backup.json  # Encrypted with a password you choose
+```
+
+**Important**: Store export files securely. You need BOTH the export file and its password to restore your vault.
+
+## 🏗️ Building from Source
+
+```bash
 git clone https://github.com/shabarba/holecard
 cd holecard
 
@@ -342,20 +239,23 @@ cargo build --release
 # Run tests
 cargo test
 
-# Check
-cargo check
-
 # Lint
 cargo clippy
 
 # Format
 cargo fmt
-
-# Install locally
-cargo install --path .
 ```
 
-## License
+## 📋 Platform Support
+
+- **macOS**: Apple Silicon (aarch64) and Intel (x86_64)
+- **Linux**: x86_64 GNU
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## 📄 License
 
 Licensed under either of:
 
@@ -364,18 +264,11 @@ Licensed under either of:
 
 at your option.
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
-
-## Acknowledgments
+## 🙏 Acknowledgments
 
 Built with:
 - [clap](https://github.com/clap-rs/clap) - Command line argument parsing
 - [argon2](https://github.com/RustCrypto/password-hashes) - Key derivation
 - [aes-gcm](https://github.com/RustCrypto/AEADs) - Authenticated encryption
 - [keyring](https://github.com/hwchen/keyring-rs) - System keyring access
-- [security-framework](https://github.com/kornelski/rust-security-framework) - macOS keychain integration (macOS)
 - [totp-lite](https://github.com/fosskers/totp-lite) - TOTP implementation
-- [sha2](https://github.com/RustCrypto/hashes) - SSH key fingerprint calculation
-- [tempfile](https://github.com/Stebalien/tempfile) - Secure temporary file handling
