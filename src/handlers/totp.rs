@@ -31,6 +31,8 @@ fn handle_totp_add(
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
+    TotpService::validate_secret(secret)?;
+
     let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
 
     let totp_entry = ctx.inner.vault.get_entry_mut("totp").map_err(|_| {
