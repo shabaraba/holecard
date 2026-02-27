@@ -22,7 +22,10 @@ impl SecretUri {
         let uri = uri.trim();
 
         if !uri.starts_with("hc://") && !uri.starts_with("op://") {
-            anyhow::bail!("Invalid URI scheme. Expected 'hc://' or 'op://', got: {}", uri);
+            anyhow::bail!(
+                "Invalid URI scheme. Expected 'hc://' or 'op://', got: {}",
+                uri
+            );
         }
 
         let caps = URI_REGEX
