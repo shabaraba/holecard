@@ -30,13 +30,13 @@ pub enum Commands {
 
     #[command(about = "Read a secret value from URI")]
     Read {
-        #[arg(help = "Secret URI (hc://[vault/]item/field)")]
+        #[arg(help = "Secret URI (hc://[vault/]item/field or op://[vault/]item/field)")]
         uri: String,
     },
 
     #[command(about = "Inject secrets from template with URI references")]
     Inject {
-        #[arg(help = "Template string with {{ hc://... }} URIs (if --input not specified)")]
+        #[arg(help = "Template string with hc://... or op://... URIs (if --input not specified)")]
         template: Option<String>,
 
         #[arg(short = 'i', long, help = "Input template file (use '-' for stdin)")]
@@ -48,7 +48,7 @@ pub enum Commands {
 
     #[command(about = "Run command with environment variables from URIs")]
     Run {
-        #[arg(long, value_parser = parse_env_var, help = "Environment variable (KEY=hc://...)")]
+        #[arg(long, value_parser = parse_env_var, help = "Environment variable (KEY=hc://... or KEY=op://...)")]
         env: Vec<(String, String)>,
 
         #[arg(last = true, help = "Command and arguments to execute")]
