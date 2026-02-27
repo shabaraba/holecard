@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use crate::domain::uri::SecretUri;
 use crate::infrastructure::KeyringManager;
-use crate::multi_vault_context::MultiVaultContext;
+use crate::multi_deck_context::MultiDeckContext;
 
 static TEMPLATE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:hc|op)://(?:[^/]+/)?[^/\s]+/[^\s]+").expect("Failed to compile template regex")
@@ -24,16 +24,16 @@ impl SecretResolver {
         let uri = SecretUri::parse(&expanded)?;
 
         let vault_name = uri.vault.as_deref().or(default_vault);
-        let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+        let ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
 
-        let entry = ctx
+        let card = ctx
             .inner
-            .vault
-            .get_entry(&uri.item)
+            .deck
+            .get_hand(&uri.item)
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-        entry.custom_fields.get(&uri.field).cloned().ok_or_else(|| {
-            anyhow::anyhow!("Field '{}' not found in entry '{}'", uri.field, uri.item)
+        card.cards.get(&uri.field).cloned().ok_or_else(|| {
+            anyhow::anyhow!("Field '{}' not found in card '{}'", uri.field, uri.item)
         })
     }
 

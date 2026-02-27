@@ -6,7 +6,7 @@ use std::path::Path;
 
 use crate::cli::commands::Cli;
 use crate::config::Config;
-use crate::infrastructure::{SessionManager, VaultRegistry};
+use crate::infrastructure::{SessionManager, DeckRegistry};
 
 pub fn handle_completion(shell: &str) -> Result<()> {
     let mut cmd = Cli::command();
@@ -127,8 +127,8 @@ pub fn handle_complete_entries(vault_name: Option<&str>, config_dir: &Path) -> R
     let vault_name = match vault_name {
         Some(name) => name.to_string(),
         None => {
-            let registry = VaultRegistry::load(config_dir)?;
-            registry.get_active_vault()?.name
+            let registry = DeckRegistry::load(config_dir)?;
+            registry.get_active_deck()?.name
         }
     };
 

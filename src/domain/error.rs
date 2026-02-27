@@ -1,12 +1,12 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum VaultError {
-    #[error("Entry '{0}' already exists")]
-    EntryAlreadyExists(String),
+pub enum DeckError {
+    #[error("Hand '{0}' already exists")]
+    HandAlreadyExists(String),
 
-    #[error("Entry '{0}' not found")]
-    EntryNotFound(String),
+    #[error("Hand '{0}' not found")]
+    HandNotFound(String),
 }
 
 #[derive(Error, Debug)]
@@ -38,9 +38,9 @@ pub enum ProviderError {
     #[error("Provider configuration error: {0}")]
     ConfigError(String),
 
-    #[error("Field '{0}' not found in entry")]
-    FieldNotFound(String),
+    #[error("Card '{0}' not found in hand")]
+    CardNotFound(String),
 
-    #[error("Invalid field name format: {0}")]
-    InvalidFieldFormat(String),
+    #[error("Invalid card name format: {0}")]
+    InvalidCardFormat(String),
 }

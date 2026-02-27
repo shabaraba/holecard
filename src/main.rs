@@ -1,14 +1,14 @@
 mod cli;
 mod config;
-mod context;
+mod deck_context;
 mod domain;
 mod handlers;
 mod infrastructure;
-mod multi_vault_context;
+mod multi_deck_context;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::commands::{Cli, Commands, EntryCommands};
+use cli::commands::{Cli, Commands, CardCommands};
 use config::get_config_dir;
 use infrastructure::KeyringManager;
 
@@ -16,12 +16,12 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let config_dir = get_config_dir()?;
     let keyring = KeyringManager::new(config_dir.clone());
-    let vault_name = cli.vault.as_deref();
+    let deck_name = cli.hand.as_deref();
 
     match cli.command {
-        Commands::Init => handlers::vault::handle_init(&keyring, &config_dir),
-        Commands::Entry { subcommand } => match subcommand {
-            EntryCommands::Add {
+        Commands::Init => handlers::deck::handle_init(&keyring, &config_dir),
+        Commands::Card { subcommand } => match subcommand {
+            CardCommands::Add {
                 name,
                 field,
                 file,
@@ -33,7 +33,7 @@ fn main() -> Result<()> {
                 gen_no_lowercase,
                 gen_no_digits,
                 gen_no_symbols,
-            } => handlers::vault::handle_add(
+            } => handlers::deck::handle_add(
                 name,
                 field,
                 file,
@@ -45,26 +45,26 @@ fn main() -> Result<()> {
                 gen_no_lowercase,
                 gen_no_digits,
                 gen_no_symbols,
-                vault_name,
+                deck_name,
                 &keyring,
                 &config_dir,
             ),
-            EntryCommands::Get {
+            CardCommands::Get {
                 name,
                 clip,
                 totp,
                 show,
-            } => handlers::vault::handle_get(
+            } => handlers::deck::handle_get(
                 &name,
                 clip,
                 totp,
                 show,
-                vault_name,
+                deck_name,
                 &keyring,
                 &config_dir,
             ),
-            EntryCommands::List => handlers::vault::handle_list(vault_name, &keyring, &config_dir),
-            EntryCommands::Edit {
+            CardCommands::List => handlers::deck::handle_list(deck_name, &keyring, &config_dir),
+            CardCommands::Edit {
                 name,
                 interactive,
                 field,
@@ -72,31 +72,31 @@ fn main() -> Result<()> {
                 rm_field,
             } => {
                 if interactive {
-                    handlers::vault::handle_edit_interactive(
+                    handlers::deck::handle_edit_interactive(
                         &name,
-                        vault_name,
+                        deck_name,
                         &keyring,
                         &config_dir,
                     )
                 } else {
-                    handlers::vault::handle_edit(
+                    handlers::deck::handle_edit(
                         &name,
                         field,
                         file,
                         rm_field,
-                        vault_name,
+                        deck_name,
                         &keyring,
                         &config_dir,
                     )
                 }
             }
-            EntryCommands::Remove { name } => {
-                handlers::vault::handle_rm(&name, vault_name, &keyring, &config_dir)
+            CardCommands::Remove { name } => {
+                handlers::deck::handle_rm(&name, deck_name, &keyring, &config_dir)
             }
         },
         Commands::Config { subcommand } => handlers::config::handle_config(subcommand, &config_dir),
         Commands::Read { uri } => {
-            handlers::read::handle_read(&uri, vault_name, &keyring, &config_dir)
+            handlers::read::handle_read(&uri, deck_name, &keyring, &config_dir)
         }
         Commands::Inject {
             template,
@@ -106,27 +106,27 @@ fn main() -> Result<()> {
             template,
             input,
             output,
-            vault_name,
+            deck_name,
             &keyring,
             &config_dir,
         ),
         Commands::Run { env, command } => {
-            handlers::run::handle_run(env, &command, vault_name, &keyring, &config_dir)
+            handlers::run::handle_run(env, &command, deck_name, &keyring, &config_dir)
         }
         Commands::Lock => handlers::session::handle_lock(&config_dir),
         Commands::Status => handlers::session::handle_status(&config_dir),
         Commands::Export { file } => {
-            handlers::transfer::handle_export(&file, vault_name, &keyring, &config_dir)
+            handlers::transfer::handle_export(&file, deck_name, &keyring, &config_dir)
         }
         Commands::Import { file, overwrite } => {
-            handlers::transfer::handle_import(&file, overwrite, vault_name, &keyring, &config_dir)
+            handlers::transfer::handle_import(&file, overwrite, deck_name, &keyring, &config_dir)
         }
         Commands::Totp { subcommand } => {
-            handlers::totp::handle_totp(subcommand, vault_name, &keyring, &config_dir)
+            handlers::totp::handle_totp(subcommand, deck_name, &keyring, &config_dir)
         }
         Commands::Provider { subcommand } => {
             let ctx =
-                multi_vault_context::MultiVaultContext::load(vault_name, &keyring, &config_dir)?;
+                multi_deck_context::MultiDeckContext::load(deck_name, &keyring, &config_dir)?;
             handlers::provider::handle_provider(&ctx.inner, &subcommand)
         }
         Commands::Generate {
@@ -148,15 +148,15 @@ fn main() -> Result<()> {
             no_symbols,
             clip,
         ),
-        Commands::Vault { subcommand } => {
-            handlers::vault_management::handle_vault(subcommand, vault_name, &keyring, &config_dir)
+        Commands::Hand { subcommand } => {
+            handlers::deck_management::handle_deck(subcommand, deck_name, &keyring, &config_dir)
         }
         Commands::Ssh { subcommand } => {
-            handlers::ssh::handle_ssh(subcommand, vault_name, &keyring, &config_dir)
+            handlers::ssh::handle_ssh(subcommand, deck_name, &keyring, &config_dir)
         }
         Commands::Completion { shell } => handlers::completion::handle_completion(&shell),
-        Commands::__CompleteEntries { vault } => {
-            handlers::completion::handle_complete_entries(vault.as_deref(), &config_dir)
+        Commands::__CompleteCards { hand } => {
+            handlers::completion::handle_complete_entries(hand.as_deref(), &config_dir)
         }
     }
 }

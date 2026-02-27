@@ -23,7 +23,7 @@ pub trait Provider: Send + Sync {
 }
 
 /// Convert field name to secret name (snake_case/camelCase -> UPPER_SNAKE_CASE)
-pub fn field_to_secret_name(field_name: &str) -> String {
+pub fn card_to_secret_name(field_name: &str) -> String {
     let mut result = String::new();
     let mut prev_lower = false;
 
@@ -51,10 +51,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_field_to_secret_name() {
-        assert_eq!(field_to_secret_name("db_url"), "DB_URL");
-        assert_eq!(field_to_secret_name("apiKey"), "API_KEY");
-        assert_eq!(field_to_secret_name("DATABASE_URL"), "DATABASE_URL");
-        assert_eq!(field_to_secret_name("mySecretValue"), "MY_SECRET_VALUE");
+    fn test_card_to_secret_name() {
+        assert_eq!(card_to_secret_name("db_url"), "DB_URL");
+        assert_eq!(card_to_secret_name("apiKey"), "API_KEY");
+        assert_eq!(card_to_secret_name("DATABASE_URL"), "DATABASE_URL");
+        assert_eq!(card_to_secret_name("mySecretValue"), "MY_SECRET_VALUE");
     }
 }

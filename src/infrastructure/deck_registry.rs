@@ -5,14 +5,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VaultMetadata {
+pub struct DeckMetadata {
     pub name: String,
     pub path: PathBuf,
     pub created_at: DateTime<Local>,
     pub last_accessed: DateTime<Local>,
 }
 
-impl VaultMetadata {
+impl DeckMetadata {
     pub fn new(name: String, path: PathBuf) -> Self {
         let now = Local::now();
         Self {
@@ -31,14 +31,14 @@ impl VaultMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct VaultsConfig {
     active_vault: String,
-    vaults: Vec<VaultMetadata>,
+    vaults: Vec<DeckMetadata>,
 }
 
-pub struct VaultRegistry {
+pub struct DeckRegistry {
     config_dir: PathBuf,
 }
 
-impl VaultRegistry {
+impl DeckRegistry {
     pub fn new(config_dir: PathBuf) -> Self {
         Self { config_dir }
     }
@@ -79,14 +79,14 @@ impl VaultRegistry {
         Ok(())
     }
 
-    pub fn create_vault(&self, name: &str, path: PathBuf) -> Result<VaultMetadata> {
+    pub fn create_deck(&self, name: &str, path: PathBuf) -> Result<DeckMetadata> {
         let mut config = self.load_config()?;
 
         if config.vaults.iter().any(|v| v.name == name) {
             anyhow::bail!("Vault '{}' already exists", name);
         }
 
-        let metadata = VaultMetadata::new(name.to_string(), path);
+        let metadata = DeckMetadata::new(name.to_string(), path);
         config.vaults.push(metadata.clone());
 
         if config.active_vault.is_empty() {
@@ -97,7 +97,7 @@ impl VaultRegistry {
         Ok(metadata)
     }
 
-    pub fn delete_vault(&self, name: &str) -> Result<()> {
+    pub fn delete_deck(&self, name: &str) -> Result<()> {
         let mut config = self.load_config()?;
 
         let initial_len = config.vaults.len();
@@ -131,7 +131,7 @@ impl VaultRegistry {
         Ok(())
     }
 
-    pub fn get_vault(&self, name: &str) -> Result<VaultMetadata> {
+    pub fn get_deck(&self, name: &str) -> Result<DeckMetadata> {
         let config = self.load_config()?;
 
         config
@@ -141,24 +141,24 @@ impl VaultRegistry {
             .ok_or_else(|| anyhow::anyhow!("Vault '{}' not found", name))
     }
 
-    pub fn get_active_vault(&self) -> Result<VaultMetadata> {
+    pub fn get_active_deck(&self) -> Result<DeckMetadata> {
         let config = self.load_config()?;
 
         if config.active_vault.is_empty() {
             anyhow::bail!("No active vault set. Use 'hc vault use <name>' to set one.");
         }
 
-        self.get_vault(&config.active_vault)
+        self.get_deck(&config.active_vault)
     }
 
-    pub fn list_vaults(&self) -> Result<Vec<VaultMetadata>> {
+    pub fn list_decks(&self) -> Result<Vec<DeckMetadata>> {
         let config = self.load_config()?;
         let mut vaults = config.vaults;
         vaults.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
         Ok(vaults)
     }
 
-    pub fn touch_vault(&self, name: &str) -> Result<()> {
+    pub fn touch_deck(&self, name: &str) -> Result<()> {
         let mut config = self.load_config()?;
 
         if let Some(vault) = config.vaults.iter_mut().find(|v| v.name == name) {
@@ -176,7 +176,7 @@ impl VaultRegistry {
         if legacy_vault_path.exists() {
             println!("🔄 Migrating existing vault to 'default' vault...");
 
-            let metadata = VaultMetadata::new("default".to_string(), legacy_vault_path);
+            let metadata = DeckMetadata::new("default".to_string(), legacy_vault_path);
             let config = VaultsConfig {
                 active_vault: "default".to_string(),
                 vaults: vec![metadata],

@@ -22,7 +22,7 @@ pub struct SessionData {
     pub derived_key: [u8; 32],
     pub salt: [u8; 16],
     #[allow(dead_code)]
-    pub entry_names: Vec<String>,
+    pub hand_names: Vec<String>,
 }
 
 pub struct SessionManager {
@@ -123,7 +123,7 @@ impl SessionManager {
         Ok(Some(SessionData {
             derived_key,
             salt,
-            entry_names: metadata.entry_names,
+            hand_names: metadata.entry_names,
         }))
     }
 

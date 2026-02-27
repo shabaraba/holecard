@@ -4,8 +4,8 @@ use clap::{Parser, Subcommand};
 #[command(name = "hc")]
 #[command(about = "Secure password manager CLI", long_about = None)]
 pub struct Cli {
-    #[arg(long, global = true, help = "Vault name to use")]
-    pub vault: Option<String>,
+    #[arg(long, global = true, help = "Hand name to use")]
+    pub hand: Option<String>,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -13,13 +13,13 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    #[command(about = "Initialize a new vault")]
+    #[command(about = "Initialize a new hand")]
     Init,
 
-    #[command(about = "Manage vault entries")]
-    Entry {
+    #[command(about = "Manage cards")]
+    Card {
         #[command(subcommand)]
-        subcommand: EntryCommands,
+        subcommand: CardCommands,
     },
 
     #[command(about = "Manage configuration")]
@@ -30,7 +30,7 @@ pub enum Commands {
 
     #[command(about = "Read a secret value from URI")]
     Read {
-        #[arg(help = "Secret URI (hc://[vault/]item/field or op://[vault/]item/field)")]
+        #[arg(help = "Secret URI (hc://[hand/]card/field or op://[hand/]card/field)")]
         uri: String,
     },
 
@@ -55,24 +55,24 @@ pub enum Commands {
         command: Vec<String>,
     },
 
-    #[command(about = "Lock the vault (clear session)")]
+    #[command(about = "Lock the hand (clear session)")]
     Lock,
 
     #[command(about = "Show session status")]
     Status,
 
-    #[command(about = "Export vault to JSON file")]
+    #[command(about = "Export hand to JSON file")]
     Export {
         #[arg(help = "Output file path")]
         file: String,
     },
 
-    #[command(about = "Import entries from JSON file")]
+    #[command(about = "Import cards from JSON file")]
     Import {
         #[arg(help = "Input file path")]
         file: String,
 
-        #[arg(long, help = "Overwrite existing entries")]
+        #[arg(long, help = "Overwrite existing cards")]
         overwrite: bool,
     },
 
@@ -115,10 +115,10 @@ pub enum Commands {
         clip: bool,
     },
 
-    #[command(about = "Manage vaults")]
-    Vault {
+    #[command(about = "Manage hands")]
+    Hand {
         #[command(subcommand)]
-        subcommand: VaultCommands,
+        subcommand: HandCommands,
     },
 
     #[command(about = "Manage SSH keys")]
@@ -133,18 +133,18 @@ pub enum Commands {
         shell: String,
     },
 
-    #[command(name = "__complete-entries", hide = true)]
-    __CompleteEntries {
+    #[command(name = "__complete-cards", hide = true)]
+    __CompleteCards {
         #[arg(long)]
-        vault: Option<String>,
+        hand: Option<String>,
     },
 }
 
 #[derive(Subcommand)]
-pub enum EntryCommands {
-    #[command(about = "Add a new entry")]
+pub enum CardCommands {
+    #[command(about = "Add a new card")]
     Add {
-        #[arg(help = "Entry name")]
+        #[arg(help = "Card name")]
         name: Option<String>,
 
         #[arg(short, long, value_parser = parse_field, help = "Custom field (key=value)")]
@@ -178,9 +178,9 @@ pub enum EntryCommands {
         gen_no_symbols: bool,
     },
 
-    #[command(about = "Get an entry")]
+    #[command(about = "Get a card")]
     Get {
-        #[arg(help = "Entry name")]
+        #[arg(help = "Card name")]
         name: String,
 
         #[arg(
@@ -198,12 +198,12 @@ pub enum EntryCommands {
         show: bool,
     },
 
-    #[command(about = "List all entries")]
+    #[command(about = "List all cards")]
     List,
 
-    #[command(about = "Edit an entry")]
+    #[command(about = "Edit a card")]
     Edit {
-        #[arg(help = "Entry name")]
+        #[arg(help = "Card name")]
         name: String,
 
         #[arg(short, long, help = "Interactive mode")]
@@ -219,18 +219,18 @@ pub enum EntryCommands {
         rm_field: Vec<String>,
     },
 
-    #[command(about = "Remove an entry")]
+    #[command(about = "Remove a card")]
     Remove {
-        #[arg(help = "Entry name")]
+        #[arg(help = "Card name")]
         name: String,
     },
 }
 
 #[derive(Subcommand)]
 pub enum ConfigCommands {
-    #[command(about = "Set vault file path")]
-    VaultPath {
-        #[arg(help = "New vault file path")]
+    #[command(about = "Set hand file path")]
+    HandPath {
+        #[arg(help = "New hand file path")]
         path: String,
     },
 
@@ -299,13 +299,13 @@ pub enum ProviderSecretsCommands {
         #[arg(help = "Provider ID")]
         provider_id: String,
 
-        #[arg(help = "Entry name or entry.field (e.g., myapp.db_url)")]
-        entry_field: String,
+        #[arg(help = "Card name or card.field (e.g., myapp.db_url)")]
+        card_field: String,
 
         #[arg(long, help = "Override secret name in provider")]
         as_name: Option<String>,
 
-        #[arg(long, help = "Push all fields from entry as separate secrets")]
+        #[arg(long, help = "Push all fields from card as separate secrets")]
         expand: bool,
     },
 
@@ -354,10 +354,10 @@ pub enum ProviderAddCommands {
 
 #[derive(Subcommand)]
 pub enum TotpCommands {
-    #[command(about = "Add TOTP secret to an entry")]
+    #[command(about = "Add TOTP secret to a card")]
     Add {
-        #[arg(help = "Entry name")]
-        entry: String,
+        #[arg(help = "Card name")]
+        card: String,
 
         #[arg(help = "TOTP secret (base32 encoded)")]
         secret: String,
@@ -365,59 +365,59 @@ pub enum TotpCommands {
 
     #[command(about = "Get TOTP code (displays and copies to clipboard)")]
     Get {
-        #[arg(help = "Entry name")]
-        entry: String,
+        #[arg(help = "Card name")]
+        card: String,
     },
 
-    #[command(about = "Remove TOTP secret from an entry")]
+    #[command(about = "Remove TOTP secret from a card")]
     Rm {
-        #[arg(help = "Entry name")]
-        entry: String,
+        #[arg(help = "Card name")]
+        card: String,
     },
 }
 
 #[derive(Subcommand)]
-pub enum VaultCommands {
-    #[command(about = "List all vaults")]
+pub enum HandCommands {
+    #[command(about = "List all hands")]
     List,
 
-    #[command(about = "Create a new vault")]
+    #[command(about = "Create a new hand")]
     Create {
-        #[arg(help = "Vault name")]
+        #[arg(help = "Hand name")]
         name: String,
     },
 
-    #[command(about = "Delete a vault")]
+    #[command(about = "Delete a hand")]
     Delete {
-        #[arg(help = "Vault name")]
+        #[arg(help = "Hand name")]
         name: String,
 
         #[arg(long, help = "Skip confirmation")]
         force: bool,
     },
 
-    #[command(about = "Set active vault")]
+    #[command(about = "Set active hand")]
     Use {
-        #[arg(help = "Vault name")]
+        #[arg(help = "Hand name")]
         name: String,
     },
 
-    #[command(about = "Move entry to another vault")]
+    #[command(about = "Move card to another hand")]
     Move {
-        #[arg(help = "Entry name")]
-        entry: String,
+        #[arg(help = "Card name")]
+        card: String,
 
-        #[arg(help = "Target vault name")]
-        to_vault: String,
+        #[arg(help = "Target hand name")]
+        to_hand: String,
     },
 
-    #[command(about = "Copy entry to another vault")]
+    #[command(about = "Copy card to another hand")]
     Copy {
-        #[arg(help = "Entry name")]
-        entry: String,
+        #[arg(help = "Card name")]
+        card: String,
 
-        #[arg(help = "Target vault name")]
-        to_vault: String,
+        #[arg(help = "Target hand name")]
+        to_hand: String,
     },
 
     #[command(about = "Change master password")]
@@ -426,9 +426,9 @@ pub enum VaultCommands {
 
 #[derive(Subcommand)]
 pub enum SshCommands {
-    #[command(about = "Add SSH connection entry")]
+    #[command(about = "Add SSH connection card")]
     Add {
-        #[arg(help = "Entry name")]
+        #[arg(help = "Card name")]
         name: String,
 
         #[arg(
@@ -461,7 +461,7 @@ pub enum SshCommands {
 
     #[command(about = "Load SSH key into ssh-agent")]
     Load {
-        #[arg(help = "Entry name containing SSH key")]
+        #[arg(help = "Card name containing SSH key")]
         name: String,
 
         #[arg(long, help = "Lifetime in seconds (0 = forever)")]
@@ -470,16 +470,16 @@ pub enum SshCommands {
 
     #[command(about = "Remove SSH key from ssh-agent")]
     Unload {
-        #[arg(help = "Entry name or public key fingerprint")]
+        #[arg(help = "Card name or public key fingerprint")]
         name: String,
     },
 
     #[command(about = "List loaded SSH keys in ssh-agent")]
     List,
 
-    #[command(about = "Connect to SSH host (auto-loads key from entry)")]
+    #[command(about = "Connect to SSH host (auto-loads key from card)")]
     Connect {
-        #[arg(help = "Entry name or alias (e.g., git@github.com)")]
+        #[arg(help = "Card name or alias (e.g., git@github.com)")]
         target: String,
 
         #[arg(last = true, help = "Additional SSH arguments")]

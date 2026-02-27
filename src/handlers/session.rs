@@ -2,13 +2,13 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::config::Config;
-use crate::infrastructure::{SessionManager, VaultRegistry};
+use crate::infrastructure::{SessionManager, DeckRegistry};
 
 pub fn handle_lock(config_dir: &Path) -> Result<()> {
     let config = Config::load(config_dir)?;
-    let registry = VaultRegistry::load(config_dir)?;
+    let registry = DeckRegistry::load(config_dir)?;
 
-    let active_vault = registry.get_active_vault()?;
+    let active_vault = registry.get_active_deck()?;
     let session = SessionManager::new(
         config_dir,
         &active_vault.name,
@@ -23,9 +23,9 @@ pub fn handle_lock(config_dir: &Path) -> Result<()> {
 
 pub fn handle_status(config_dir: &Path) -> Result<()> {
     let config = Config::load(config_dir)?;
-    let registry = VaultRegistry::load(config_dir)?;
+    let registry = DeckRegistry::load(config_dir)?;
 
-    let active_vault = registry.get_active_vault()?;
+    let active_vault = registry.get_active_deck()?;
     let session = SessionManager::new(
         config_dir,
         &active_vault.name,

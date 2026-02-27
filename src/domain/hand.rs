@@ -3,24 +3,24 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Entry {
+pub struct Hand {
     pub name: String,
-    pub custom_fields: HashMap<String, String>,
+    pub cards: HashMap<String, String>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
-impl Entry {
+impl Hand {
     pub fn new(
         name: String,
-        custom_fields: HashMap<String, String>,
+        cards: HashMap<String, String>,
         notes: Option<String>,
     ) -> Self {
         let now = Utc::now();
         Self {
             name,
-            custom_fields,
+            cards,
             notes,
             created_at: now,
             updated_at: now,

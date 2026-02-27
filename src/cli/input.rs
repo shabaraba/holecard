@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use dialoguer::{theme::ColorfulTheme, Confirm, Editor, Input, Password, Select};
 use std::collections::HashMap;
 
-use crate::domain::Entry;
+use crate::domain::Hand;
 
 pub fn prompt_master_password() -> Result<String> {
     Password::with_theme(&ColorfulTheme::default())
@@ -34,7 +34,7 @@ pub fn prompt_entry_name() -> Result<String> {
         .context("Failed to read entry name")
 }
 
-pub fn prompt_custom_fields() -> Result<HashMap<String, String>> {
+pub fn prompt_cards() -> Result<HashMap<String, String>> {
     let mut fields = HashMap::new();
 
     println!("\nEnter custom fields (leave key empty to finish):");
@@ -114,9 +114,9 @@ pub enum EditAction {
     Done,
 }
 
-pub fn prompt_edit_menu(entry: &Entry) -> Result<EditAction> {
+pub fn prompt_edit_menu(hand: &Hand) -> Result<EditAction> {
     let mut options = vec!["Add new field", "Edit notes", "Done"];
-    let mut field_keys: Vec<String> = entry.custom_fields.keys().cloned().collect();
+    let mut field_keys: Vec<String> = hand.cards.keys().cloned().collect();
     field_keys.sort();
 
     if !field_keys.is_empty() {

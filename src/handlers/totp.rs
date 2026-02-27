@@ -7,39 +7,39 @@ use std::time::Duration;
 use crate::cli::commands::TotpCommands;
 use crate::domain::TotpService;
 use crate::infrastructure::KeyringManager;
-use crate::multi_vault_context::MultiVaultContext;
+use crate::multi_deck_context::MultiDeckContext;
 
 pub fn handle_totp(
     subcommand: TotpCommands,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
     match subcommand {
-        TotpCommands::Add { entry, secret } => {
-            handle_totp_add(&entry, &secret, vault_name, keyring, config_dir)
+        TotpCommands::Add { card, secret } => {
+            handle_totp_add(&card, &secret, deck_name, keyring, config_dir)
         }
-        TotpCommands::Get { entry } => handle_totp_get(&entry, vault_name, keyring, config_dir),
-        TotpCommands::Rm { entry } => handle_totp_rm(&entry, vault_name, keyring, config_dir),
+        TotpCommands::Get { card } => handle_totp_get(&card, deck_name, keyring, config_dir),
+        TotpCommands::Rm { card } => handle_totp_rm(&card, deck_name, keyring, config_dir),
     }
 }
 
 fn handle_totp_add(
     service_name: &str,
     secret: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
     TotpService::validate_secret(secret)?;
 
-    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let totp_entry = ctx.inner.vault.get_entry_mut("totp").map_err(|_| {
+    let totp_entry = ctx.inner.deck.get_hand_mut("totp").map_err(|_| {
         anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
     })?;
 
-    if totp_entry.custom_fields.contains_key(service_name) {
+    if totp_entry.cards.contains_key(service_name) {
         println!(
             "⚠ TOTP secret for '{}' already exists. Overwriting...",
             service_name
@@ -47,7 +47,7 @@ fn handle_totp_add(
     }
 
     totp_entry
-        .custom_fields
+        .cards
         .insert(service_name.to_string(), secret.to_string());
     totp_entry.updated_at = chrono::Utc::now();
 
@@ -59,16 +59,16 @@ fn handle_totp_add(
 
 fn handle_totp_get(
     service_name: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
-    let totp_entry = ctx.inner.vault.get_entry("totp").map_err(|_| {
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let totp_entry = ctx.inner.deck.get_hand("totp").map_err(|_| {
         anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
     })?;
 
-    if let Some(secret) = totp_entry.custom_fields.get(service_name) {
+    if let Some(secret) = totp_entry.cards.get(service_name) {
         if secret.is_empty() {
             anyhow::bail!("TOTP secret for '{}' is empty", service_name);
         }
@@ -106,17 +106,17 @@ fn handle_totp_get(
 
 fn handle_totp_rm(
     service_name: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let totp_entry = ctx.inner.vault.get_entry_mut("totp").map_err(|_| {
+    let totp_entry = ctx.inner.deck.get_hand_mut("totp").map_err(|_| {
         anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
     })?;
 
-    if totp_entry.custom_fields.remove(service_name).is_some() {
+    if totp_entry.cards.remove(service_name).is_some() {
         totp_entry.updated_at = chrono::Utc::now();
         ctx.save()?;
         println!("✓ TOTP secret for '{}' removed", service_name);

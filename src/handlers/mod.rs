@@ -1,5 +1,7 @@
 pub mod completion;
 pub mod config;
+pub mod deck;
+pub mod deck_management;
 pub mod inject;
 pub mod password;
 pub mod provider;
@@ -9,5 +11,3 @@ pub mod session;
 pub mod ssh;
 pub mod totp;
 pub mod transfer;
-pub mod vault;
-pub mod vault_management;

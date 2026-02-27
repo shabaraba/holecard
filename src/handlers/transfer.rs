@@ -2,26 +2,26 @@ use anyhow::{Context, Result};
 use std::path::Path;
 
 use crate::cli::input;
-use crate::domain::Entry;
+use crate::domain::Hand;
 use crate::infrastructure::{
     decrypt_for_import, encrypt_for_export, require_biometric_auth, KeyringManager,
 };
-use crate::multi_vault_context::MultiVaultContext;
+use crate::multi_deck_context::MultiDeckContext;
 
 pub fn handle_export(
     file: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     // Require Touch ID for export operations
     require_biometric_auth(&ctx.inner.config, "Export entire vault")?;
 
-    let entries = ctx.inner.vault.list_entries();
+    let entries = ctx.inner.deck.list_hands();
 
-    let export_data: Vec<&Entry> = entries.into_iter().collect();
+    let export_data: Vec<&Hand> = entries.into_iter().collect();
     let json = serde_json::to_string_pretty(&export_data).context("Failed to serialize entries")?;
 
     println!("\nSet a password to encrypt the export file:");
@@ -35,7 +35,7 @@ pub fn handle_export(
     println!(
         "\n✓ Exported {} entries from vault '{}' to {} (encrypted)",
         export_data.len(),
-        ctx.vault_name,
+        ctx.deck_name,
         file
     );
 
@@ -45,11 +45,11 @@ pub fn handle_export(
 pub fn handle_import(
     file: &str,
     overwrite: bool,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     let encrypted_data = std::fs::read(file).context("Failed to read import file")?;
 
@@ -60,14 +60,14 @@ pub fn handle_import(
         .map_err(|_| anyhow::anyhow!("Failed to decrypt: wrong password or corrupted file"))?;
 
     let json = String::from_utf8(decrypted).context("Failed to decode decrypted data as UTF-8")?;
-    let entries: Vec<Entry> = serde_json::from_str(&json).context("Failed to parse import file")?;
+    let entries: Vec<Hand> = serde_json::from_str(&json).context("Failed to parse import file")?;
 
     let mut imported = 0;
     let mut overwritten = 0;
     let mut skipped = 0;
 
     for entry in entries {
-        match ctx.inner.vault.import_entry(entry.clone(), overwrite) {
+        match ctx.inner.deck.import_hand(entry.clone(), overwrite) {
             Ok(was_overwritten) => {
                 if was_overwritten {
                     overwritten += 1;
@@ -84,7 +84,7 @@ pub fn handle_import(
 
     ctx.save()?;
 
-    println!("\n✓ Import complete to vault '{}':", ctx.vault_name);
+    println!("\n✓ Import complete to vault '{}':", ctx.deck_name);
     println!("  • {} entries imported", imported);
     if overwritten > 0 {
         println!("  • {} entries overwritten", overwritten);

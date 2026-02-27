@@ -2,45 +2,45 @@ use anyhow::{Context, Result};
 use rand::RngCore;
 use std::path::Path;
 
-use crate::cli::commands::VaultCommands;
+use crate::cli::commands::HandCommands;
 use crate::domain::CryptoService;
 use crate::infrastructure::{
-    CryptoServiceImpl, KeyringManager, SessionManager, VaultRegistry, VaultStorage,
+    CryptoServiceImpl, KeyringManager, SessionManager, DeckRegistry, DeckStorage,
 };
-use crate::multi_vault_context::MultiVaultContext;
-use crate::{cli::input, config::Config, domain::Vault};
+use crate::multi_deck_context::MultiDeckContext;
+use crate::{cli::input, config::Config, domain::Deck};
 
-pub fn handle_vault(
-    subcommand: VaultCommands,
+pub fn handle_deck(
+    subcommand: HandCommands,
     vault_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
     match subcommand {
-        VaultCommands::List => handle_list(config_dir),
-        VaultCommands::Create { name } => handle_create(name, keyring, config_dir),
-        VaultCommands::Delete { name, force } => handle_delete(name, force, config_dir),
-        VaultCommands::Use { name } => handle_use(name, config_dir),
-        VaultCommands::Move { entry, to_vault } => {
-            handle_move(entry, to_vault, keyring, config_dir)
+        HandCommands::List => handle_list(config_dir),
+        HandCommands::Create { name } => handle_create(name, keyring, config_dir),
+        HandCommands::Delete { name, force } => handle_delete(name, force, config_dir),
+        HandCommands::Use { name } => handle_use(name, config_dir),
+        HandCommands::Move { card, to_hand } => {
+            handle_move(card, to_hand, keyring, config_dir)
         }
-        VaultCommands::Copy { entry, to_vault } => {
-            handle_copy(entry, to_vault, keyring, config_dir)
+        HandCommands::Copy { card, to_hand } => {
+            handle_copy(card, to_hand, keyring, config_dir)
         }
-        VaultCommands::Passwd => handle_passwd(vault_name, keyring, config_dir),
+        HandCommands::Passwd => handle_passwd(vault_name, keyring, config_dir),
     }
 }
 
 fn handle_list(config_dir: &Path) -> Result<()> {
-    let registry = VaultRegistry::load(config_dir)?;
-    let vaults = registry.list_vaults()?;
+    let registry = DeckRegistry::load(config_dir)?;
+    let vaults = registry.list_decks()?;
 
     if vaults.is_empty() {
         println!("No vaults found. Create one with 'hc vault create <name>'");
         return Ok(());
     }
 
-    let active_vault = registry.get_active_vault().ok().map(|v| v.name);
+    let active_vault = registry.get_active_deck().ok().map(|v| v.name);
 
     println!("\nVaults:");
     for vault in vaults {
@@ -61,7 +61,7 @@ fn handle_list(config_dir: &Path) -> Result<()> {
 }
 
 fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
-    let registry = VaultRegistry::load(config_dir)?;
+    let registry = DeckRegistry::load(config_dir)?;
 
     println!("========================================");
     println!("     Creating Vault: {}", name);
@@ -91,18 +91,18 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
         }
     };
 
-    let vault = Vault::new();
-    let storage = VaultStorage::new(crypto);
+    let vault = Deck::new();
+    let storage = DeckStorage::new(crypto);
 
     let (derived_key, salt) = storage
-        .derive_key_from_vault(&vault_path, &master_password, &secret_key)
+        . derive_key_from_deck(&vault_path, &master_password, &secret_key)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     storage
         .save_with_cached_key(&vault, &vault_path, &derived_key, &salt)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    registry.create_vault(&name, vault_path)?;
+    registry.create_deck(&name, vault_path)?;
 
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, &name, config.session_timeout_minutes);
@@ -123,8 +123,8 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
 }
 
 fn handle_delete(name: String, force: bool, config_dir: &Path) -> Result<()> {
-    let registry = VaultRegistry::load(config_dir)?;
-    let vault = registry.get_vault(&name)?;
+    let registry = DeckRegistry::load(config_dir)?;
+    let vault = registry.get_deck(&name)?;
 
     if !force {
         println!("⚠️  About to delete vault '{}'", name);
@@ -149,7 +149,7 @@ fn handle_delete(name: String, force: bool, config_dir: &Path) -> Result<()> {
     let session = SessionManager::new(config_dir, &name, config.session_timeout_minutes);
     let _ = session.clear_session();
 
-    registry.delete_vault(&name)?;
+    registry.delete_deck(&name)?;
 
     println!("✓ Vault '{}' deleted successfully", name);
 
@@ -157,9 +157,9 @@ fn handle_delete(name: String, force: bool, config_dir: &Path) -> Result<()> {
 }
 
 fn handle_use(name: String, config_dir: &Path) -> Result<()> {
-    let registry = VaultRegistry::load(config_dir)?;
+    let registry = DeckRegistry::load(config_dir)?;
 
-    registry.get_vault(&name)?;
+    registry.get_deck(&name)?;
 
     registry.set_active(&name)?;
 
@@ -174,34 +174,34 @@ fn handle_move(
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut source_ctx = MultiVaultContext::load(None, keyring, config_dir)?;
-    let source_vault_name = source_ctx.vault_name.clone();
+    let mut source_ctx = MultiDeckContext::load(None, keyring, config_dir)?;
+    let source_vault_name = source_ctx.deck_name.clone();
 
     if source_vault_name == to_vault {
         anyhow::bail!("Source and target vault are the same");
     }
 
-    let entry = source_ctx
+    let card = source_ctx
         .inner
-        .vault
-        .get_entry(&entry_name)
+        .deck
+        .get_hand(&entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?
         .clone();
 
     source_ctx
         .inner
-        .vault
-        .remove_entry(&entry_name)
+        .deck
+        .remove_hand(&entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     source_ctx.save()?;
 
-    let mut target_ctx = MultiVaultContext::load(Some(&to_vault), keyring, config_dir)?;
+    let mut target_ctx = MultiDeckContext::load(Some(&to_vault), keyring, config_dir)?;
 
     target_ctx
         .inner
-        .vault
-        .add_entry(entry)
+        .deck
+        .add_hand(card)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     target_ctx.save()?;
@@ -220,26 +220,26 @@ fn handle_copy(
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let source_ctx = MultiVaultContext::load(None, keyring, config_dir)?;
-    let source_vault_name = source_ctx.vault_name.clone();
+    let source_ctx = MultiDeckContext::load(None, keyring, config_dir)?;
+    let source_vault_name = source_ctx.deck_name.clone();
 
     if source_vault_name == to_vault {
         anyhow::bail!("Source and target vault are the same");
     }
 
-    let entry = source_ctx
+    let card = source_ctx
         .inner
-        .vault
-        .get_entry(&entry_name)
+        .deck
+        .get_hand(&entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?
         .clone();
 
-    let mut target_ctx = MultiVaultContext::load(Some(&to_vault), keyring, config_dir)?;
+    let mut target_ctx = MultiDeckContext::load(Some(&to_vault), keyring, config_dir)?;
 
     target_ctx
         .inner
-        .vault
-        .add_entry(entry)
+        .deck
+        .add_hand(card)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     target_ctx.save()?;
@@ -262,11 +262,11 @@ fn handle_passwd(
     println!("========================================");
     println!("\nFirst, verify your current master password:");
 
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
-    let vault_name = ctx.vault_name.clone();
+    let ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
+    let vault_name = ctx.deck_name.clone();
 
-    let registry = VaultRegistry::load(config_dir)?;
-    let vault_path = registry.get_vault(&vault_name)?.path.clone();
+    let registry = DeckRegistry::load(config_dir)?;
+    let vault_path = registry.get_deck(&vault_name)?.path.clone();
 
     let backup_path = vault_path.with_extension("enc.backup");
     std::fs::copy(&vault_path, &backup_path).context("Failed to create vault backup")?;
@@ -289,7 +289,7 @@ fn handle_passwd(
     if let Err(e) =
         ctx.inner
             .storage
-            .save_with_cached_key(&ctx.inner.vault, &vault_path, &derived_key, &salt)
+            .save_with_cached_key(&ctx.inner.deck, &vault_path, &derived_key, &salt)
     {
         std::fs::rename(&backup_path, &vault_path).context("Failed to restore vault backup")?;
         anyhow::bail!(
@@ -300,8 +300,8 @@ fn handle_passwd(
 
     let entry_names: Vec<String> = ctx
         .inner
-        .vault
-        .list_entries()
+        .deck
+        .list_hands()
         .iter()
         .map(|e| e.name.clone())
         .collect();

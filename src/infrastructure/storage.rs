@@ -1,14 +1,14 @@
-use crate::domain::{CryptoError, CryptoService, Vault};
+use crate::domain::{CryptoError, CryptoService, Deck};
 use std::fs;
 use std::path::Path;
 
 const SALT_LEN: usize = 16;
 
-pub struct VaultStorage<C: CryptoService> {
+pub struct DeckStorage<C: CryptoService> {
     crypto: C,
 }
 
-impl<C: CryptoService> VaultStorage<C> {
+impl<C: CryptoService> DeckStorage<C> {
     pub fn new(crypto: C) -> Self {
         Self { crypto }
     }
@@ -17,9 +17,9 @@ impl<C: CryptoService> VaultStorage<C> {
         &self,
         path: &Path,
         derived_key: &[u8; 32],
-    ) -> Result<Vault, CryptoError> {
+    ) -> Result<Deck, CryptoError> {
         if !path.exists() {
-            return Ok(Vault::new());
+            return Ok(Deck::new());
         }
 
         let encrypted_data = fs::read(path)
@@ -32,15 +32,15 @@ impl<C: CryptoService> VaultStorage<C> {
         let ciphertext = &encrypted_data[SALT_LEN..];
         let decrypted_data = self.crypto.decrypt_with_key(ciphertext, derived_key)?;
 
-        let vault: Vault = serde_json::from_slice(&decrypted_data)
+        let deck: Deck = serde_json::from_slice(&decrypted_data)
             .map_err(|e| CryptoError::InvalidData(format!("Failed to deserialize vault: {}", e)))?;
 
-        Ok(vault)
+        Ok(deck)
     }
 
     pub fn save_with_cached_key(
         &self,
-        vault: &Vault,
+        vault: &Deck,
         path: &Path,
         derived_key: &[u8; 32],
         salt: &[u8; 16],
@@ -63,7 +63,7 @@ impl<C: CryptoService> VaultStorage<C> {
         self.write_vault_file(path, &encrypted_data)
     }
 
-    pub fn derive_key_from_vault(
+    pub fn derive_key_from_deck(
         &self,
         path: &Path,
         master_password: &str,

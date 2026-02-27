@@ -16,7 +16,7 @@ pub fn handle_config(subcommand: Option<ConfigCommands>, config_dir: &Path) -> R
                 config.session_timeout_minutes
             );
         }
-        Some(ConfigCommands::VaultPath { path }) => {
+        Some(ConfigCommands::HandPath { path }) => {
             let new_path = PathBuf::from(path);
             let expanded_path = if new_path.starts_with("~") {
                 let home = dirs::home_dir().context("Failed to get home directory")?;

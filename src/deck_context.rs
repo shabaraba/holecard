@@ -3,25 +3,25 @@ use std::path::{Path, PathBuf};
 
 use crate::cli::input;
 use crate::config::Config;
-use crate::domain::Vault;
+use crate::domain::Deck;
 use crate::infrastructure::{
-    CryptoServiceImpl, KeyringManager, SessionData, SessionManager, VaultStorage,
+    CryptoServiceImpl, DeckStorage, KeyringManager, SessionData, SessionManager,
 };
 
-pub struct VaultContext {
-    pub vault: Vault,
-    pub storage: VaultStorage<CryptoServiceImpl>,
+pub struct DeckContext {
+    pub deck: Deck,
+    pub storage: DeckStorage<CryptoServiceImpl>,
     pub session_data: SessionData,
     pub config: Config,
     pub config_dir: PathBuf,
-    vault_path: PathBuf,
-    vault_name: String,
+    deck_path: PathBuf,
+    deck_name: String,
 }
 
 fn resolve_master_password(
     config: &Config,
     keyring: &KeyringManager,
-    vault_name: &str,
+    deck_name: &str,
 ) -> Result<String> {
     if !config.enable_biometric {
         return input::prompt_master_password();
@@ -33,18 +33,18 @@ fn resolve_master_password(
     }
 
     println!("🔐 Authenticating...");
-    match biometric.authenticate("Unlock your vault") {
+    match biometric.authenticate("Unlock your deck") {
         Ok(true) => {
             println!("✅ Authentication successful");
-            match keyring.load_master_password(vault_name)? {
+            match keyring.load_master_password(deck_name)? {
                 Some(pwd) => {
-                    println!("🔓 Unlocking vault...");
+                    println!("🔓 Unlocking deck...");
                     Ok(pwd)
                 }
                 None => {
                     println!("⚠️  No cached password found. Please enter your master password.");
                     let pwd = input::prompt_master_password()?;
-                    keyring.save_master_password(vault_name, &pwd)?;
+                    keyring.save_master_password(deck_name, &pwd)?;
                     Ok(pwd)
                 }
             }
@@ -60,87 +60,87 @@ fn resolve_master_password(
     }
 }
 
-impl VaultContext {
+impl DeckContext {
     pub fn load(
-        vault_path: &Path,
-        vault_name: &str,
+        deck_path: &Path,
+        deck_name: &str,
         keyring: &KeyringManager,
         config_dir: &Path,
     ) -> Result<Self> {
         let secret_key = keyring.load_secret_key()?;
         let config = Config::load(config_dir)?;
         let crypto = CryptoServiceImpl::new();
-        let storage = VaultStorage::new(crypto);
-        let session = SessionManager::new(config_dir, vault_name, config.session_timeout_minutes);
+        let storage = DeckStorage::new(crypto);
+        let session = SessionManager::new(config_dir, deck_name, config.session_timeout_minutes);
 
-        let (vault, session_data) = if let Some(cached) = session.load_session()? {
-            let vault = storage
-                .load_with_cached_key(vault_path, &cached.derived_key)
+        let (deck, session_data) = if let Some(cached) = session.load_session()? {
+            let deck = storage
+                .load_with_cached_key(deck_path, &cached.derived_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
-            (vault, cached)
+            (deck, cached)
         } else {
-            let master_password = resolve_master_password(&config, keyring, vault_name)?;
+            let master_password = resolve_master_password(&config, keyring, deck_name)?;
 
             let (derived_key, salt) = storage
-                .derive_key_from_vault(vault_path, &master_password, &secret_key)
+                .derive_key_from_deck(deck_path, &master_password, &secret_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            let vault = storage
-                .load_with_cached_key(vault_path, &derived_key)
+            let deck = storage
+                .load_with_cached_key(deck_path, &derived_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            let entry_names: Vec<String> = vault
-                .list_entries()
+            let hand_names: Vec<String> = deck
+                .list_hands()
                 .iter()
                 .map(|e| e.name.clone())
                 .collect();
 
-            session.save_session(&derived_key, &salt, entry_names.clone())?;
+            session.save_session(&derived_key, &salt, hand_names.clone())?;
             let session_data = SessionData {
                 derived_key,
                 salt,
-                entry_names,
+                hand_names,
             };
-            (vault, session_data)
+            (deck, session_data)
         };
 
         Ok(Self {
-            vault,
+            deck,
             storage,
             session_data,
             config,
             config_dir: config_dir.to_path_buf(),
-            vault_path: vault_path.to_path_buf(),
-            vault_name: vault_name.to_string(),
+            deck_path: deck_path.to_path_buf(),
+            deck_name: deck_name.to_string(),
         })
     }
 
     pub fn save(&self) -> Result<()> {
         self.storage
             .save_with_cached_key(
-                &self.vault,
-                &self.vault_path,
+                &self.deck,
+                &self.deck_path,
                 &self.session_data.derived_key,
                 &self.session_data.salt,
             )
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-        let entry_names: Vec<String> = self
-            .vault
-            .list_entries()
+        let hand_names: Vec<String> = self
+            .deck
+            .list_hands()
             .iter()
             .map(|e| e.name.clone())
             .collect();
 
         let session = SessionManager::new(
             &self.config_dir,
-            &self.vault_name,
+            &self.deck_name,
             self.config.session_timeout_minutes,
         );
         session.save_session(
             &self.session_data.derived_key,
             &self.session_data.salt,
-            entry_names,
+            hand_names,
         )?;
 
         Ok(())
