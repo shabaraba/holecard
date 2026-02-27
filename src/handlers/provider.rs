@@ -282,14 +282,19 @@ fn handle_secrets_add(
     } else {
         let field = field_name.ok_or_else(|| {
             ProviderError::ConfigError(
-                "Must specify field name (e.g., entry.field) or use --expand".to_string(),
+                "Must specify field name (e.g., card.field) or use --expand".to_string(),
             )
         })?;
 
         let value = card
             .cards
             .get(field)
-            .ok_or_else(|| ProviderError::CardNotFound(field.to_string()))?;
+            .ok_or_else(|| {
+                ProviderError::ConfigError(format!(
+                    "Field '{}' not found in card '{}'",
+                    field, entry_name
+                ))
+            })?;
 
         let secret_name = as_name
             .as_ref()

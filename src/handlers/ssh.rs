@@ -319,12 +319,13 @@ fn handle_ssh_connect(
             .context("Entry has no 'host' or 'alias' field and target is not in user@host format")?
     };
 
+    let has_alias = card.cards.contains_key("alias");
     let has_private_key = card.cards.contains_key("private_key");
     let has_password = card.cards.contains_key("password");
 
-    if !has_private_key && !has_password {
+    if !has_alias && !has_private_key && !has_password {
         anyhow::bail!(
-            "Entry '{}' must have either 'private_key' or 'password' field for SSH authentication",
+            "Entry '{}' must have either 'alias', 'private_key', or 'password' field for SSH authentication",
             entry_name
         );
     }
@@ -349,7 +350,12 @@ fn handle_ssh_connect(
             .status()
             .context("Failed to execute ssh command")?
     } else {
-        unreachable!("Either private_key or password should exist")
+        // Alias mode: use ssh_target directly (managed by ~/.ssh/config)
+        Command::new("ssh")
+            .arg(&ssh_target)
+            .args(&ssh_args)
+            .status()
+            .context("Failed to execute ssh command")?
     };
 
     if !status.success() {

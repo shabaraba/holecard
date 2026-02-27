@@ -123,8 +123,8 @@ complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand
     );
 }
 
-pub fn handle_complete_entries(vault_name: Option<&str>, config_dir: &Path) -> Result<()> {
-    let vault_name = match vault_name {
+pub fn handle_complete_entries(deck_name: Option<&str>, config_dir: &Path) -> Result<()> {
+    let deck_name = match deck_name {
         Some(name) => name.to_string(),
         None => {
             let registry = DeckRegistry::load(config_dir)?;
@@ -133,11 +133,11 @@ pub fn handle_complete_entries(vault_name: Option<&str>, config_dir: &Path) -> R
     };
 
     let config = Config::load(config_dir)?;
-    let session = SessionManager::new(config_dir, &vault_name, config.session_timeout_minutes);
+    let session = SessionManager::new(config_dir, &deck_name, config.session_timeout_minutes);
 
-    let entry_names = session.load_entry_names().unwrap_or_default();
+    let hand_names = session.load_entry_names().unwrap_or_default();
 
-    for name in entry_names {
+    for name in hand_names {
         println!("{}", name);
     }
 

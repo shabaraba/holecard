@@ -36,13 +36,13 @@ fn handle_list(config_dir: &Path) -> Result<()> {
     let vaults = registry.list_decks()?;
 
     if vaults.is_empty() {
-        println!("No vaults found. Create one with 'hc vault create <name>'");
+        println!("No decks found. Create one with 'hc deck create <name>'");
         return Ok(());
     }
 
     let active_vault = registry.get_active_deck().ok().map(|v| v.name);
 
-    println!("\nVaults:");
+    println!("\nDecks:");
     for vault in vaults {
         let active_indicator = if Some(&vault.name) == active_vault.as_ref() {
             " (active)"

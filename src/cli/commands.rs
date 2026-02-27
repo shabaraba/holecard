@@ -228,9 +228,9 @@ pub enum CardCommands {
 
 #[derive(Subcommand)]
 pub enum ConfigCommands {
-    #[command(about = "Set hand file path")]
-    HandPath {
-        #[arg(help = "New hand file path")]
+    #[command(about = "Set deck file path")]
+    DeckPath {
+        #[arg(help = "New deck file path")]
         path: String,
     },
 

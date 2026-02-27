@@ -37,14 +37,14 @@ pub fn prompt_entry_name() -> Result<String> {
 pub fn prompt_cards() -> Result<HashMap<String, String>> {
     let mut fields = HashMap::new();
 
-    println!("\nEnter custom fields (leave key empty to finish):");
+    println!("\nEnter cards (leave name empty to finish):");
 
     loop {
         let key: String = Input::with_theme(&ColorfulTheme::default())
-            .with_prompt("Field name")
+            .with_prompt("Card name")
             .allow_empty(true)
             .interact_text()
-            .context("Failed to read field name")?;
+            .context("Failed to read card name")?;
 
         if key.is_empty() {
             break;
@@ -54,7 +54,7 @@ pub fn prompt_cards() -> Result<HashMap<String, String>> {
             .with_prompt(format!("{} value", key))
             .allow_empty_password(true)
             .interact()
-            .context("Failed to read field value")?;
+            .context("Failed to read card value")?;
 
         fields.insert(key, value);
     }
@@ -115,14 +115,14 @@ pub enum EditAction {
 }
 
 pub fn prompt_edit_menu(hand: &Hand) -> Result<EditAction> {
-    let mut options = vec!["Add new field", "Edit notes", "Done"];
+    let mut options = vec!["Add new card", "Edit notes", "Done"];
     let mut field_keys: Vec<String> = hand.cards.keys().cloned().collect();
     field_keys.sort();
 
     if !field_keys.is_empty() {
-        println!("\nCurrent fields: {}", field_keys.join(", "));
-        options.insert(0, "Edit existing field");
-        options.insert(1, "Delete field");
+        println!("\nCurrent cards: {}", field_keys.join(", "));
+        options.insert(0, "Edit existing card");
+        options.insert(1, "Delete card");
     }
 
     let selection = Select::with_theme(&ColorfulTheme::default())

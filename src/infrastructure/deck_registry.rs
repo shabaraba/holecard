@@ -28,6 +28,7 @@ impl DeckMetadata {
     }
 }
 
+// Note: Struct and field names retained for backward compatibility with vaults.toml
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct VaultsConfig {
     active_vault: String,
@@ -83,7 +84,7 @@ impl DeckRegistry {
         let mut config = self.load_config()?;
 
         if config.vaults.iter().any(|v| v.name == name) {
-            anyhow::bail!("Vault '{}' already exists", name);
+            anyhow::bail!("Deck '{}' already exists", name);
         }
 
         let metadata = DeckMetadata::new(name.to_string(), path);

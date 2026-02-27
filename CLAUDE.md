@@ -81,18 +81,18 @@ src/
 ### Key Design Patterns
 
 - **Layered architecture**: main.rs → handlers → context → domain + infrastructure
-- **Single responsibility**: Each handler module groups related commands (hand ops, session ops, etc.)
+- **Single responsibility**: Each handler module groups related commands (deck/hand ops, session ops, etc.)
 - **Trait-based crypto abstraction**: `CryptoService` trait in domain, `CryptoServiceImpl` in infrastructure
 - **Session caching**: Derived key cached in system keyring with configurable timeout to avoid repeated password entry
 - **Dual-key encryption**: Master password + secret key combined before key derivation for additional security
-- **Atomic writes**: Hand saves use temp file + rename pattern
+- **Atomic writes**: Deck saves use temp file + rename pattern
 
 ### Data Flow
 
-1. `HandContext::load()` checks for cached session or prompts for master password
+1. `DeckContext::load()` checks for cached session or prompts for master password
 2. Secret key is automatically retrieved from system keyring
 3. Key derivation: `master_password | secret_key` → Argon2id → 32-byte derived key
-4. Hand file format: `[16-byte salt][12-byte nonce][AES-256-GCM ciphertext]`
+4. Deck file format: `[16-byte salt][12-byte nonce][AES-256-GCM ciphertext]`
 5. Session stores derived key in system keyring with metadata file for timeout tracking
 
 ### Backup and Recovery

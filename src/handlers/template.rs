@@ -14,13 +14,13 @@ pub fn handle_inject(
     config_dir: &Path,
 ) -> Result<()> {
     let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
-    let card = ctx
+    let hand = ctx
         .inner
-        .hand
-        .get_deck(entry_name)
+        .deck
+        .get_hand(entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    let rendered = TemplateEngine::render(template, entry)?;
+    let rendered = TemplateEngine::render(template, hand)?;
     println!("{}", rendered);
 
     Ok(())
@@ -38,16 +38,16 @@ pub fn handle_run(
     }
 
     let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
-    let card = ctx
+    let hand = ctx
         .inner
-        .hand
-        .get_deck(entry_name)
+        .deck
+        .get_hand(entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let mut cmd = Command::new(&command[0]);
     cmd.args(&command[1..]);
 
-    for (key, value) in &card.cards {
+    for (key, value) in &hand.cards {
         cmd.env(key.to_uppercase(), value);
     }
 

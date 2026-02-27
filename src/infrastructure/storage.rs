@@ -40,7 +40,7 @@ impl<C: CryptoService> DeckStorage<C> {
 
     pub fn save_with_cached_key(
         &self,
-        vault: &Deck,
+        deck: &Deck,
         path: &Path,
         derived_key: &[u8; 32],
         salt: &[u8; 16],
@@ -51,7 +51,7 @@ impl<C: CryptoService> DeckStorage<C> {
             })?;
         }
 
-        let json_data = serde_json::to_vec(vault)
+        let json_data = serde_json::to_vec(deck)
             .map_err(|e| CryptoError::InvalidData(format!("Failed to serialize vault: {}", e)))?;
 
         let ciphertext = self.crypto.encrypt_with_key(&json_data, derived_key)?;
