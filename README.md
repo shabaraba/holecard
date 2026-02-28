@@ -6,36 +6,36 @@
 
 A secure CLI password manager with dual-key encryption, TOTP support, and SSH key management.
 
-## ✨ Features
+## Features
 
-- **🔐 Dual-key encryption** - Master password + secret key for enhanced security
-- **💪 Strong cryptography** - Argon2id key derivation + AES-256-GCM encryption
-- **🔑 System keyring integration** - Secure storage with macOS/Linux keychain
-- **📱 TOTP support** - Generate 2FA codes with auto-clipboard copy
-- **🔌 SSH key management** - Store and manage SSH keys with ssh-agent integration
-- **🍎 Biometric authentication** - Touch ID, Face ID, Apple Watch support on macOS
-- **⚡ Session caching** - Avoid repeated password entry with configurable timeout
+- **Dual-key encryption** - Master password + secret key for enhanced security
+- **Strong cryptography** - Argon2id key derivation + AES-256-GCM encryption
+- **System keyring integration** - Secure storage with macOS/Linux keychain
+- **TOTP support** - Generate 2FA codes with auto-clipboard copy
+- **SSH key management** - Store and manage SSH keys with ssh-agent integration
+- **Biometric authentication** - Touch ID, Face ID, Apple Watch support on macOS
+- **Session caching** - Avoid repeated password prompts with configurable timeout
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install from crates.io
 cargo install holecard-cli
 
-# Initialize vault
+# Initialize hand
 hc init
 
-# Add an entry
-hc add github -f username=myuser -f password=mypass
+# Add a card
+hc card add github -f username=myuser -f password=mypass
 
-# Get an entry
-hc get github
+# Get a card
+hc card get github
 
 # Copy password to clipboard (auto-clears after 30s)
-hc get github -c
+hc card get github -c
 ```
 
-## 📦 Installation
+## Installation
 
 ### From crates.io (Recommended)
 
@@ -75,32 +75,32 @@ sudo mv hc /usr/local/bin/
 cargo binstall holecard-cli
 ```
 
-## 📖 Basic Usage
+## Basic Usage
 
 ### Managing Passwords
 
 ```bash
-# Add entry with custom fields
-hc add aws -f access_key=AKIA... -f secret_key=...
+# Add card with custom fields
+hc card add aws -f access_key=AKIA... -f secret_key=...
 
-# Add entry interactively
-hc add
+# Add card interactively
+hc card add
 
-# List all entries
-hc list
+# List all cards
+hc card list
 
-# Get entry details
-hc get github
+# Get card details
+hc card get github
 
 # Copy specific field to clipboard
-hc get github -c password
-hc get github -c username
+hc card get github -c password
+hc card get github -c username
 
-# Edit entry
-hc edit github -f password=newpass
+# Edit card
+hc card edit github -f password=newpass
 
-# Remove entry
-hc rm github
+# Remove card
+hc card rm github
 ```
 
 ### TOTP (Two-Factor Authentication)
@@ -121,7 +121,7 @@ hc totp rm github
 
 ```bash
 # Add SSH key from file
-hc add my-server \
+hc card add my-server \
   --file private_key=~/.ssh/id_rsa \
   -f alias="user@server.com" \
   -f passphrase="optional"
@@ -146,14 +146,14 @@ hc ssh unload my-server
 # Check session status
 hc status
 
-# Lock vault (clear cached session)
+# Lock hand (clear cached session)
 hc lock
 
 # Configure session timeout (minutes)
 hc config session-timeout 30
 ```
 
-## 🎯 Advanced Features
+## Advanced Features
 
 ### URI-Based Secret Injection (1Password Compatible)
 
@@ -177,7 +177,7 @@ hc inject -i config.yaml -o config.prod.yaml
 cat config.yaml | hc inject -i - > config.prod.yaml
 ```
 
-**URI Format**: `hc://[vault/]item/field` or `op://[vault/]item/field`
+**URI Format**: `hc://[hand/]card/field` or `op://[hand/]card/field`
 
 ### Environment Variables with URIs
 
@@ -191,13 +191,13 @@ hc run \
   -- python app.py
 
 # Supports environment variable substitution
-export VAULT=production
-hc run --env DB_PASS=hc://${VAULT}/db/password -- ./deploy.sh
+export HAND=production
+hc run --env DB_PASS=hc://${HAND}/db/password -- ./deploy.sh
 ```
 
 ### Legacy Template Injection
 
-Render templates with entry fields:
+Render templates with card fields:
 
 ```bash
 hc inject github "https://{{username}}:{{password}}@github.com"
@@ -206,10 +206,10 @@ hc inject aws "AWS_ACCESS_KEY={{access_key}}"
 
 ### Legacy Environment Variables
 
-Run commands with entry-based environment variables:
+Run commands with card-based environment variables:
 
 ```bash
-# Entry fields become uppercase env vars
+# Card fields become uppercase env vars
 hc run aws -- env | grep -E "^(ACCESS_KEY|SECRET_KEY)"
 hc run database -- psql -h localhost -U $USERNAME -d mydb
 ```
@@ -217,12 +217,12 @@ hc run database -- psql -h localhost -U $USERNAME -d mydb
 ### Import/Export
 
 ```bash
-# Export vault to encrypted JSON
+# Export hand to encrypted JSON
 hc export backup.json
 
 # Import from encrypted JSON
 hc import backup.json
-hc import backup.json --overwrite  # Replace existing entries
+hc import backup.json --overwrite  # Replace existing cards
 ```
 
 ### Biometric Authentication (macOS)
@@ -238,14 +238,14 @@ hc config enable-biometric true
 # - Subsequent unlocks: Biometric only
 ```
 
-## 📚 Documentation
+## Documentation
 
 - [Security Guide](docs/SECURITY.md) - Encryption details and security model
 - [SSH Key Management](docs/SSH.md) - Comprehensive SSH integration guide
-- [Multi-Vault Support](docs/MULTI_VAULT.md) - Managing multiple vaults
+- [Multi-Hand Support](docs/MULTI_VAULT.md) - Managing multiple hands
 - [Distribution Guide](DISTRIBUTION.md) - Release and distribution process
 
-## 🔒 Security
+## Security
 
 ### Encryption
 
@@ -255,22 +255,22 @@ hc config enable-biometric true
 
 ### Session Caching
 
-The derived encryption key is cached in the system keyring to avoid repeated password entry. Sessions automatically expire after the configured timeout (default: 60 minutes).
+The derived encryption key is cached in the system keyring to avoid repeated password prompts. Sessions automatically expire after the configured timeout (default: 60 minutes).
 
 ### Backup and Recovery
 
-Use `hc export` to backup your vault:
+Use `hc export` to backup your hand:
 
 ```bash
 hc export backup.json  # Encrypted with a password you choose
 ```
 
-**Important**: Store export files securely. You need BOTH the export file and its password to restore your vault.
+**Important**: Store export files securely. You need BOTH the export file and its password to restore your hand.
 
-## 🏗️ Building from Source
+## Building from Source
 
 ```bash
-git clone https://github.com/shabaraba/holecard
+git clone https://github.com/shabarba/holecard
 cd holecard
 
 # Set up Git hooks (recommended for contributors)
@@ -298,16 +298,16 @@ The project includes a pre-push hook that automatically runs:
 
 This prevents CI failures by catching issues before pushing to remote.
 
-## 📋 Platform Support
+## Platform Support
 
 - **macOS**: Apple Silicon (aarch64) and Intel (x86_64)
 - **Linux**: x86_64 GNU
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
-## 📄 License
+## License
 
 Licensed under either of:
 
@@ -316,7 +316,7 @@ Licensed under either of:
 
 at your option.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 Built with:
 - [clap](https://github.com/clap-rs/clap) - Command line argument parsing

@@ -12,7 +12,7 @@ static ENV_VAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SecretUri {
-    pub vault: Option<String>,
+    pub hand: Option<String>,
     pub item: String,
     pub field: String,
 }
@@ -32,7 +32,7 @@ impl SecretUri {
             .captures(uri)
             .ok_or_else(|| anyhow::anyhow!("Invalid URI format: {}", uri))?;
 
-        let vault = caps.get(1).map(|m| m.as_str().to_string());
+        let hand = caps.get(1).map(|m| m.as_str().to_string());
         let item = caps.get(2).unwrap().as_str().to_string();
         let field = caps.get(3).unwrap().as_str().to_string();
 
@@ -43,7 +43,7 @@ impl SecretUri {
             anyhow::bail!("Field name cannot be empty in URI: {}", uri);
         }
 
-        Ok(Self { vault, item, field })
+        Ok(Self { hand, item, field })
     }
 
     #[allow(dead_code)]
@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn test_parse_full_uri() {
         let uri = SecretUri::parse("hc://production/database/password").unwrap();
-        assert_eq!(uri.vault, Some("production".to_string()));
+        assert_eq!(uri.hand, Some("production".to_string()));
         assert_eq!(uri.item, "database");
         assert_eq!(uri.field, "password");
     }
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn test_parse_uri_without_vault() {
         let uri = SecretUri::parse("hc://github/token").unwrap();
-        assert_eq!(uri.vault, None);
+        assert_eq!(uri.hand, None);
         assert_eq!(uri.item, "github");
         assert_eq!(uri.field, "token");
     }
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_parse_uri_with_nested_field() {
         let uri = SecretUri::parse("hc://aws/credentials/access_key").unwrap();
-        assert_eq!(uri.vault, Some("aws".to_string()));
+        assert_eq!(uri.hand, Some("aws".to_string()));
         assert_eq!(uri.item, "credentials");
         assert_eq!(uri.field, "access_key");
     }
@@ -128,10 +128,10 @@ mod tests {
 
     #[test]
     fn test_expand_env_vars_with_existing() {
-        std::env::set_var("TEST_VAULT", "production");
-        let result = SecretUri::expand_env_vars("hc://${TEST_VAULT:-default}/item/field");
+        std::env::set_var("TEST_HAND", "production");
+        let result = SecretUri::expand_env_vars("hc://${TEST_HAND:-default}/item/field");
         assert_eq!(result, "hc://production/item/field");
-        std::env::remove_var("TEST_VAULT");
+        std::env::remove_var("TEST_HAND");
     }
 
     #[test]
@@ -145,7 +145,7 @@ mod tests {
     fn test_parse_op_scheme_compatibility() {
         // op:// should also work (1Password compatibility)
         let uri = SecretUri::parse("op://production/database/password").unwrap();
-        assert_eq!(uri.vault, Some("production".to_string()));
+        assert_eq!(uri.hand, Some("production".to_string()));
         assert_eq!(uri.item, "database");
         assert_eq!(uri.field, "password");
     }

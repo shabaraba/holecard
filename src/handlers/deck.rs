@@ -36,13 +36,13 @@ pub fn handle_add(
     gen_no_lowercase: bool,
     gen_no_digits: bool,
     gen_no_symbols: bool,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let entry_name = name.unwrap_or_else(|| input::prompt_entry_name().unwrap());
+    let card_name = name.unwrap_or_else(|| input::prompt_card_name().unwrap());
 
     let mut custom_fields: HashMap<String, String> = if fields.is_empty() && file_fields.is_empty()
     {
@@ -71,7 +71,7 @@ pub fn handle_add(
 
     let notes = input::prompt_notes()?;
 
-    let hand = Hand::new(entry_name.clone(), custom_fields, notes);
+    let hand = Hand::new(card_name.clone(), custom_fields, notes);
     ctx.inner
         .deck
         .add_hand(hand)
@@ -79,7 +79,7 @@ pub fn handle_add(
 
     ctx.save()?;
 
-    println!("Entry '{}' added successfully!", entry_name);
+    println!("Card '{}' added successfully!", card_name);
     Ok(())
 }
 
@@ -88,11 +88,11 @@ pub fn handle_get(
     clip: Option<Option<String>>,
     totp: bool,
     show: bool,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     // Require Touch ID for sensitive operations (show or clip)
     if show || clip.is_some() {
@@ -105,7 +105,7 @@ pub fn handle_get(
         .get_hand(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    println!("\nEntry: {}", card.name());
+    println!("\nCard: {}", card.name());
     println!("Created: {}", card.created_at.format("%Y-%m-%d %H:%M:%S"));
     println!("Updated: {}", card.updated_at.format("%Y-%m-%d %H:%M:%S"));
 
@@ -162,26 +162,25 @@ pub fn handle_get(
 }
 
 pub fn handle_list(
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
-    let entries = ctx.inner.deck.list_hands();
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let hands = ctx.inner.deck.list_hands();
 
-    if entries.is_empty() {
-        println!("No entries found.");
+    if hands.is_empty() {
+        println!("No cards found.");
         return Ok(());
     }
 
-    println!("\nEntries:");
-    for entry in entries {
-        println!("  • {}", entry.name());
-        if !entry.cards.is_empty() {
+    println!("\nCards:");
+    for hand in hands {
+        println!("  • {}", hand.name());
+        if !hand.cards.is_empty() {
             println!(
                 "    Fields: {}",
-                entry
-                    .cards
+                hand.cards
                     .keys()
                     .map(|k| k.as_str())
                     .collect::<Vec<_>>()
@@ -198,14 +197,14 @@ pub fn handle_edit(
     fields: Vec<(String, String)>,
     file_fields: Vec<(String, String)>,
     rm_fields: Vec<String>,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     // Require Touch ID for edit operations
-    require_biometric_auth(&ctx.inner.config, "Modify vault entry")?;
+    require_biometric_auth(&ctx.inner.config, "Modify card")?;
 
     let card = ctx
         .inner
@@ -234,7 +233,7 @@ pub fn handle_edit(
 
         card.touch();
         ctx.save()?;
-        println!("✓ Entry '{}' updated successfully!", name);
+        println!("✓ Card '{}' updated successfully!", name);
     } else {
         println!(
             "⚠ No changes specified. Use -f to add/update fields, --file to add from file, or --rm-field to remove fields."
@@ -246,18 +245,18 @@ pub fn handle_edit(
 
 pub fn handle_edit_interactive(
     name: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     let card = ctx
         .inner
         .deck
         .get_hand_mut(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
-    println!("Editing entry: {}", card.name());
+    println!("Editing card: {}", card.name());
 
     loop {
         match input::prompt_edit_menu(card)? {
@@ -290,20 +289,20 @@ pub fn handle_edit_interactive(
     card.touch();
     ctx.save()?;
 
-    println!("✓ Entry '{}' updated successfully!", name);
+    println!("✓ Card '{}' updated successfully!", name);
     Ok(())
 }
 
 pub fn handle_rm(
     name: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let mut ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     // Require Touch ID for remove operations
-    require_biometric_auth(&ctx.inner.config, "Delete vault entry")?;
+    require_biometric_auth(&ctx.inner.config, "Delete card")?;
 
     ctx.inner
         .deck
@@ -312,6 +311,6 @@ pub fn handle_rm(
 
     ctx.save()?;
 
-    println!("✓ Entry '{}' removed successfully!", name);
+    println!("✓ Card '{}' removed successfully!", name);
     Ok(())
 }

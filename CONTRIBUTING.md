@@ -111,7 +111,7 @@ fix(crypto): correct nonce generation for export
 
 docs(readme): update installation instructions
 
-test(vault): add test cases for entry CRUD operations
+test(deck): add test cases for card CRUD operations
 ```
 
 ### Development Tips
@@ -240,14 +240,14 @@ mod tests {
 ```rust
 // tests/integration_test.rs
 #[test]
-fn test_vault_lifecycle() {
+fn test_deck_lifecycle() {
     // Setup
     let temp_dir = tempfile::tempdir().unwrap();
-    let vault_path = temp_dir.path().join("vault.enc");
+    let deck_path = temp_dir.path().join("vault.enc");
 
-    // Initialize vault
-    // Add entry
-    // Get entry
+    // Initialize hand
+    // Add card
+    // Get card
     // Verify
 }
 ```
@@ -375,10 +375,10 @@ Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md):
 4. `hc get test` → Error
 
 ## Expected Behavior
-Entry should be retrieved successfully
+Card should be retrieved successfully
 
 ## Actual Behavior
-Error: Failed to decrypt vault: decryption failed
+Error: Failed to decrypt hand: decryption failed
 ```
 
 ### Feature Requests
@@ -420,9 +420,9 @@ holecard/
 ### Key Files
 
 - `src/infrastructure/crypto_impl.rs` - Encryption implementation
-- `src/infrastructure/storage.rs` - Vault file I/O
-- `src/domain/vault.rs` - Vault data structure
-- `src/handlers/vault.rs` - Vault command handlers
+- `src/infrastructure/storage.rs` - Deck file I/O
+- `src/domain/deck.rs` - Deck data structure
+- `src/handlers/deck.rs` - Deck command handlers
 
 ### Useful Commands
 

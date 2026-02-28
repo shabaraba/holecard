@@ -14,8 +14,8 @@ struct SessionMetadata {
     created_at: u64,
     last_accessed: u64,
     salt: String,
-    #[serde(default)]
-    entry_names: Vec<String>,
+    #[serde(default, alias = "entry_names")]
+    card_names: Vec<String>,
 }
 
 pub struct SessionData {
@@ -32,10 +32,10 @@ pub struct SessionManager {
 }
 
 impl SessionManager {
-    pub fn new(config_dir: &Path, vault_name: &str, timeout_minutes: u64) -> Self {
+    pub fn new(config_dir: &Path, deck_name: &str, timeout_minutes: u64) -> Self {
         Self {
-            service_name: format!("{}-{}", SERVICE_NAME_PREFIX, vault_name),
-            session_file: config_dir.join(format!("session_{}.json", vault_name)),
+            service_name: format!("{}-{}", SERVICE_NAME_PREFIX, deck_name),
+            session_file: config_dir.join(format!("session_{}.json", deck_name)),
             timeout_minutes,
         }
     }
@@ -44,7 +44,7 @@ impl SessionManager {
         &self,
         derived_key: &[u8; 32],
         salt: &[u8; 16],
-        entry_names: Vec<String>,
+        card_names: Vec<String>,
     ) -> Result<()> {
         let encoded_key = BASE64.encode(derived_key);
         let encoded_salt = BASE64.encode(salt);
@@ -65,7 +65,7 @@ impl SessionManager {
             created_at: now,
             last_accessed: now,
             salt: encoded_salt,
-            entry_names,
+            card_names,
         };
         let json = serde_json::to_string(&metadata)?;
         fs::write(&self.session_file, json)?;
@@ -123,7 +123,7 @@ impl SessionManager {
         Ok(Some(SessionData {
             derived_key,
             salt,
-            hand_names: metadata.entry_names,
+            hand_names: metadata.card_names,
         }))
     }
 
@@ -143,7 +143,7 @@ impl SessionManager {
         self.load_session().ok().flatten().is_some()
     }
 
-    pub fn load_entry_names(&self) -> Result<Vec<String>> {
+    pub fn load_card_names(&self) -> Result<Vec<String>> {
         if !self.session_file.exists() {
             return Ok(Vec::new());
         }
@@ -151,7 +151,7 @@ impl SessionManager {
         let content = fs::read_to_string(&self.session_file)?;
         let metadata: SessionMetadata = serde_json::from_str(&content)?;
 
-        Ok(metadata.entry_names)
+        Ok(metadata.card_names)
     }
 
     fn touch_session(&self) -> Result<()> {

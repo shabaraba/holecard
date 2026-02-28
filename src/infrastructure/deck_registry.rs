@@ -48,7 +48,7 @@ impl DeckRegistry {
         let registry = Self::new(config_dir.to_path_buf());
 
         if !registry.registry_path().exists() {
-            registry.migrate_legacy_vault()?;
+            registry.migrate_legacy_deck()?;
         }
 
         Ok(registry)
@@ -73,8 +73,7 @@ impl DeckRegistry {
     }
 
     fn save_config(&self, config: &VaultsConfig) -> Result<()> {
-        let content =
-            toml::to_string_pretty(config).context("Failed to serialize vaults config")?;
+        let content = toml::to_string_pretty(config).context("Failed to serialize deck config")?;
 
         fs::write(self.registry_path(), content).context("Failed to write vaults.toml")?;
         Ok(())
@@ -105,7 +104,7 @@ impl DeckRegistry {
         config.vaults.retain(|v| v.name != name);
 
         if config.vaults.len() == initial_len {
-            anyhow::bail!("Vault '{}' not found", name);
+            anyhow::bail!("Deck '{}' not found", name);
         }
 
         if config.active_vault == name {
@@ -124,7 +123,7 @@ impl DeckRegistry {
         let mut config = self.load_config()?;
 
         if !config.vaults.iter().any(|v| v.name == name) {
-            anyhow::bail!("Vault '{}' not found", name);
+            anyhow::bail!("Deck '{}' not found", name);
         }
 
         config.active_vault = name.to_string();
@@ -139,14 +138,14 @@ impl DeckRegistry {
             .vaults
             .into_iter()
             .find(|v| v.name == name)
-            .ok_or_else(|| anyhow::anyhow!("Vault '{}' not found", name))
+            .ok_or_else(|| anyhow::anyhow!("Deck '{}' not found", name))
     }
 
     pub fn get_active_deck(&self) -> Result<DeckMetadata> {
         let config = self.load_config()?;
 
         if config.active_vault.is_empty() {
-            anyhow::bail!("No active vault set. Use 'hc vault use <name>' to set one.");
+            anyhow::bail!("No active deck set. Use 'hc hand use <name>' to set one.");
         }
 
         self.get_deck(&config.active_vault)
@@ -154,37 +153,37 @@ impl DeckRegistry {
 
     pub fn list_decks(&self) -> Result<Vec<DeckMetadata>> {
         let config = self.load_config()?;
-        let mut vaults = config.vaults;
-        vaults.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
-        Ok(vaults)
+        let mut decks = config.vaults;
+        decks.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
+        Ok(decks)
     }
 
     pub fn touch_deck(&self, name: &str) -> Result<()> {
         let mut config = self.load_config()?;
 
-        if let Some(vault) = config.vaults.iter_mut().find(|v| v.name == name) {
-            vault.touch();
+        if let Some(deck) = config.vaults.iter_mut().find(|v| v.name == name) {
+            deck.touch();
             self.save_config(&config)?;
             Ok(())
         } else {
-            anyhow::bail!("Vault '{}' not found", name);
+            anyhow::bail!("Deck '{}' not found", name);
         }
     }
 
-    fn migrate_legacy_vault(&self) -> Result<()> {
-        let legacy_vault_path = self.config_dir.join("vault.enc");
+    fn migrate_legacy_deck(&self) -> Result<()> {
+        let legacy_deck_path = self.config_dir.join("vault.enc");
 
-        if legacy_vault_path.exists() {
-            println!("🔄 Migrating existing vault to 'default' vault...");
+        if legacy_deck_path.exists() {
+            println!("🔄 Migrating existing deck to 'default' deck...");
 
-            let metadata = DeckMetadata::new("default".to_string(), legacy_vault_path);
+            let metadata = DeckMetadata::new("default".to_string(), legacy_deck_path);
             let config = VaultsConfig {
                 active_vault: "default".to_string(),
                 vaults: vec![metadata],
             };
 
             self.save_config(&config)?;
-            println!("✓ Migration complete. Your vault is now named 'default'.");
+            println!("✓ Migration complete. Your deck is now named 'default'.");
         }
 
         Ok(())

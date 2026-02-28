@@ -27,11 +27,11 @@ pub fn prompt_master_password_confirm() -> Result<String> {
     Ok(password)
 }
 
-pub fn prompt_entry_name() -> Result<String> {
+pub fn prompt_card_name() -> Result<String> {
     Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Entry name")
+        .with_prompt("Card name")
         .interact_text()
-        .context("Failed to read entry name")
+        .context("Failed to read card name")
 }
 
 pub fn prompt_cards() -> Result<HashMap<String, String>> {
@@ -79,7 +79,7 @@ pub fn prompt_notes() -> Result<Option<String>> {
 #[allow(dead_code)]
 pub fn prompt_confirm_reinit() -> Result<bool> {
     Confirm::with_theme(&ColorfulTheme::default())
-        .with_prompt("⚠ Vault already exists. Reinitialize? This will DELETE ALL existing data!")
+        .with_prompt("⚠ Hand already exists. Reinitialize? This will DELETE ALL existing data!")
         .default(false)
         .interact()
         .context("Failed to read confirmation")

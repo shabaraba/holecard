@@ -9,7 +9,7 @@ pub fn handle_inject(
     template: Option<String>,
     input: Option<String>,
     output: Option<String>,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -32,8 +32,7 @@ pub fn handle_inject(
         }
     };
 
-    let rendered =
-        SecretResolver::resolve_template(&template_str, vault_name, keyring, config_dir)?;
+    let rendered = SecretResolver::resolve_template(&template_str, deck_name, keyring, config_dir)?;
 
     if let Some(output_path) = output {
         std::fs::write(&output_path, rendered.as_bytes())

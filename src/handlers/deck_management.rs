@@ -12,7 +12,7 @@ use crate::{cli::input, config::Config, domain::Deck};
 
 pub fn handle_deck(
     subcommand: HandCommands,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -23,33 +23,33 @@ pub fn handle_deck(
         HandCommands::Use { name } => handle_use(name, config_dir),
         HandCommands::Move { card, to_hand } => handle_move(card, to_hand, keyring, config_dir),
         HandCommands::Copy { card, to_hand } => handle_copy(card, to_hand, keyring, config_dir),
-        HandCommands::Passwd => handle_passwd(vault_name, keyring, config_dir),
+        HandCommands::Passwd => handle_passwd(deck_name, keyring, config_dir),
     }
 }
 
 fn handle_list(config_dir: &Path) -> Result<()> {
     let registry = DeckRegistry::load(config_dir)?;
-    let vaults = registry.list_decks()?;
+    let decks = registry.list_decks()?;
 
-    if vaults.is_empty() {
+    if decks.is_empty() {
         println!("No decks found. Create one with 'hc deck create <name>'");
         return Ok(());
     }
 
-    let active_vault = registry.get_active_deck().ok().map(|v| v.name);
+    let active_deck = registry.get_active_deck().ok().map(|v| v.name);
 
     println!("\nDecks:");
-    for vault in vaults {
-        let active_indicator = if Some(&vault.name) == active_vault.as_ref() {
+    for deck in decks {
+        let active_indicator = if Some(&deck.name) == active_deck.as_ref() {
             " (active)"
         } else {
             ""
         };
-        println!("  • {}{}", vault.name, active_indicator);
-        println!("    Path: {}", vault.path.display());
+        println!("  • {}{}", deck.name, active_indicator);
+        println!("    Path: {}", deck.path.display());
         println!(
             "    Last accessed: {}",
-            vault.last_accessed.format("%Y-%m-%d %H:%M:%S")
+            deck.last_accessed.format("%Y-%m-%d %H:%M:%S")
         );
     }
 
@@ -60,20 +60,20 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
     let registry = DeckRegistry::load(config_dir)?;
 
     println!("========================================");
-    println!("     Creating Vault: {}", name);
+    println!("     Creating Hand: {}", name);
     println!("========================================");
     println!("\nPlease set your Master Password.");
     println!("Requirements:");
     println!("  • At least 12 characters");
-    println!("  • This will be needed to access your vault");
+    println!("  • This will be needed to access your hand");
     println!("========================================\n");
 
     let master_password = input::prompt_master_password_confirm()?;
 
-    let vault_path = config_dir.join(format!("{}.enc", name));
+    let deck_path = config_dir.join(format!("{}.enc", name));
 
-    if vault_path.exists() {
-        anyhow::bail!("Vault file already exists at: {}", vault_path.display());
+    if deck_path.exists() {
+        anyhow::bail!("Hand file already exists at: {}", deck_path.display());
     }
 
     let crypto = CryptoServiceImpl::new();
@@ -87,30 +87,30 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
         }
     };
 
-    let vault = Deck::new();
+    let deck = Deck::new();
     let storage = DeckStorage::new(crypto);
 
     let (derived_key, salt) = storage
-        .derive_key_from_deck(&vault_path, &master_password, &secret_key)
+        .derive_key_from_deck(&deck_path, &master_password, &secret_key)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     storage
-        .save_with_cached_key(&vault, &vault_path, &derived_key, &salt)
+        .save_with_cached_key(&deck, &deck_path, &derived_key, &salt)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    registry.create_deck(&name, vault_path)?;
+    registry.create_deck(&name, deck_path)?;
 
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, &name, config.session_timeout_minutes);
     session.save_session(&derived_key, &salt, Vec::new())?;
 
     println!("\n========================================");
-    println!("     Vault '{}' Created Successfully", name);
+    println!("     Hand '{}' Created Successfully", name);
     println!("========================================");
     println!("\n✓ Master password set");
     println!("✓ Secret key stored in system keyring");
     println!("\nIMPORTANT:");
-    println!("  • Use 'hc export' regularly to backup your vault");
+    println!("  • Use 'hc export' regularly to backup your hand");
     println!("  • Keep your export file and password safe");
     println!("  • You need BOTH the export file and its password to restore");
     println!("========================================\n");
@@ -120,11 +120,11 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
 
 fn handle_delete(name: String, force: bool, config_dir: &Path) -> Result<()> {
     let registry = DeckRegistry::load(config_dir)?;
-    let vault = registry.get_deck(&name)?;
+    let deck = registry.get_deck(&name)?;
 
     if !force {
-        println!("⚠️  About to delete vault '{}'", name);
-        println!("   Path: {}", vault.path.display());
+        println!("⚠️  About to delete hand '{}'", name);
+        println!("   Path: {}", deck.path.display());
         print!("\nAre you sure? (y/N): ");
         let mut response = String::new();
         std::io::stdin().read_line(&mut response)?;
@@ -134,10 +134,10 @@ fn handle_delete(name: String, force: bool, config_dir: &Path) -> Result<()> {
         }
     }
 
-    if vault.path.exists() {
-        std::fs::remove_file(&vault.path).context(format!(
-            "Failed to delete vault file: {}",
-            vault.path.display()
+    if deck.path.exists() {
+        std::fs::remove_file(&deck.path).context(format!(
+            "Failed to delete hand file: {}",
+            deck.path.display()
         ))?;
     }
 
@@ -147,7 +147,7 @@ fn handle_delete(name: String, force: bool, config_dir: &Path) -> Result<()> {
 
     registry.delete_deck(&name)?;
 
-    println!("✓ Vault '{}' deleted successfully", name);
+    println!("✓ Hand '{}' deleted successfully", name);
 
     Ok(())
 }
@@ -159,33 +159,33 @@ fn handle_use(name: String, config_dir: &Path) -> Result<()> {
 
     registry.set_active(&name)?;
 
-    println!("✓ Active vault set to '{}'", name);
+    println!("✓ Active hand set to '{}'", name);
 
     Ok(())
 }
 
 fn handle_move(
-    entry_name: String,
-    to_vault: String,
+    card_name: String,
+    to_deck: String,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
     let mut source_ctx = MultiDeckContext::load(None, keyring, config_dir)?;
-    let source_vault_name = source_ctx.deck_name.clone();
+    let source_deck_name = source_ctx.deck_name.clone();
 
-    if source_vault_name == to_vault {
-        anyhow::bail!("Source and target vault are the same");
+    if source_deck_name == to_deck {
+        anyhow::bail!("Source and target hand are the same");
     }
 
     let card = source_ctx
         .inner
         .deck
-        .get_hand(&entry_name)
+        .get_hand(&card_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?
         .clone();
 
     // Load target first to ensure it exists and is accessible
-    let mut target_ctx = MultiDeckContext::load(Some(&to_vault), keyring, config_dir)?;
+    let mut target_ctx = MultiDeckContext::load(Some(&to_deck), keyring, config_dir)?;
 
     // Add to target and save before removing from source (safe order)
     target_ctx
@@ -200,46 +200,46 @@ fn handle_move(
     source_ctx
         .inner
         .deck
-        .remove_hand(&entry_name)
+        .remove_hand(&card_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     // If source save fails, attempt rollback
     if let Err(e) = source_ctx.save() {
         // Attempt to rollback: remove from target
-        let _ = target_ctx.inner.deck.remove_hand(&entry_name);
+        let _ = target_ctx.inner.deck.remove_hand(&card_name);
         let _ = target_ctx.save();
         return Err(e).context("Failed to save source deck after move");
     }
 
     println!(
-        "✓ Entry '{}' moved from '{}' to '{}'",
-        entry_name, source_vault_name, to_vault
+        "✓ Card '{}' moved from '{}' to '{}'",
+        card_name, source_deck_name, to_deck
     );
 
     Ok(())
 }
 
 fn handle_copy(
-    entry_name: String,
-    to_vault: String,
+    card_name: String,
+    to_deck: String,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
     let source_ctx = MultiDeckContext::load(None, keyring, config_dir)?;
-    let source_vault_name = source_ctx.deck_name.clone();
+    let source_deck_name = source_ctx.deck_name.clone();
 
-    if source_vault_name == to_vault {
-        anyhow::bail!("Source and target vault are the same");
+    if source_deck_name == to_deck {
+        anyhow::bail!("Source and target hand are the same");
     }
 
     let card = source_ctx
         .inner
         .deck
-        .get_hand(&entry_name)
+        .get_hand(&card_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?
         .clone();
 
-    let mut target_ctx = MultiDeckContext::load(Some(&to_vault), keyring, config_dir)?;
+    let mut target_ctx = MultiDeckContext::load(Some(&to_deck), keyring, config_dir)?;
 
     target_ctx
         .inner
@@ -250,15 +250,15 @@ fn handle_copy(
     target_ctx.save()?;
 
     println!(
-        "✓ Entry '{}' copied from '{}' to '{}'",
-        entry_name, source_vault_name, to_vault
+        "✓ Card '{}' copied from '{}' to '{}'",
+        card_name, source_deck_name, to_deck
     );
 
     Ok(())
 }
 
 fn handle_passwd(
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -267,14 +267,14 @@ fn handle_passwd(
     println!("========================================");
     println!("\nFirst, verify your current master password:");
 
-    let ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
-    let vault_name = ctx.deck_name.clone();
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let deck_name_str = ctx.deck_name.clone();
 
     let registry = DeckRegistry::load(config_dir)?;
-    let vault_path = registry.get_deck(&vault_name)?.path.clone();
+    let deck_path = registry.get_deck(&deck_name_str)?.path.clone();
 
-    let backup_path = vault_path.with_extension("enc.backup");
-    std::fs::copy(&vault_path, &backup_path).context("Failed to create vault backup")?;
+    let backup_path = deck_path.with_extension("enc.backup");
+    std::fs::copy(&deck_path, &backup_path).context("Failed to create hand backup")?;
 
     println!("\n========================================");
     println!("     Set New Master Password");
@@ -294,16 +294,16 @@ fn handle_passwd(
     if let Err(e) =
         ctx.inner
             .storage
-            .save_with_cached_key(&ctx.inner.deck, &vault_path, &derived_key, &salt)
+            .save_with_cached_key(&ctx.inner.deck, &deck_path, &derived_key, &salt)
     {
-        std::fs::rename(&backup_path, &vault_path).context("Failed to restore vault backup")?;
+        std::fs::rename(&backup_path, &deck_path).context("Failed to restore hand backup")?;
         anyhow::bail!(
-            "Failed to re-encrypt vault: {}. Vault restored from backup.",
+            "Failed to re-encrypt hand: {}. Hand restored from backup.",
             e
         );
     }
 
-    let entry_names: Vec<String> = ctx
+    let card_names: Vec<String> = ctx
         .inner
         .deck
         .list_hands()
@@ -312,10 +312,10 @@ fn handle_passwd(
         .collect();
 
     let config = Config::load(config_dir)?;
-    let session = SessionManager::new(config_dir, &vault_name, config.session_timeout_minutes);
+    let session = SessionManager::new(config_dir, &deck_name_str, config.session_timeout_minutes);
 
     let clear_result = session.clear_session();
-    let save_result = session.save_session(&derived_key, &salt, entry_names);
+    let save_result = session.save_session(&derived_key, &salt, card_names);
     std::fs::remove_file(&backup_path).ok();
 
     clear_result?;
@@ -323,7 +323,7 @@ fn handle_passwd(
 
     println!("\n✓ Master password changed successfully");
     println!("✓ Session renewed");
-    println!("\nNext vault access will use the new password.");
+    println!("\nNext hand access will use the new password.");
 
     Ok(())
 }

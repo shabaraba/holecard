@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub vault_path: PathBuf,
+    #[serde(alias = "vault_path")]
+    pub deck_path: PathBuf,
     pub session_timeout_minutes: u64,
     #[serde(default = "default_enable_biometric")]
     pub enable_biometric: bool,
@@ -40,7 +41,7 @@ impl Config {
 
     fn default_with_dir(config_dir: &Path) -> Self {
         Self {
-            vault_path: config_dir.join("vault.enc"),
+            deck_path: config_dir.join("vault.enc"),
             session_timeout_minutes: 60,
             enable_biometric: default_enable_biometric(),
         }

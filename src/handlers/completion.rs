@@ -57,47 +57,47 @@ pub fn handle_completion(shell: &str) -> Result<()> {
 fn print_bash_dynamic_completion() {
     println!(
         r#"
-# Dynamic entry name completion
-_hc_complete_entry_names() {{
+# Dynamic card name completion
+_hc_complete_card_names() {{
     local entries
-    entries=$(hc __complete-entries 2>/dev/null)
+    entries=$(hc __complete-cards 2>/dev/null)
     COMPREPLY+=($(compgen -W "$entries" -- "${{COMP_WORDS[COMP_CWORD]}}"))
 }}
 
-# Override completion for commands that take entry names
-_hc_entry_get() {{
+# Override completion for commands that take card names
+_hc_card_get() {{
     case "${{prev}}" in
         get|edit|remove|rm)
-            _hc_complete_entry_names
+            _hc_complete_card_names
             return 0
             ;;
     esac
 }}
 
-complete -F _hc_entry_get hc
+complete -F _hc_card_get hc
 "#
     );
 }
 
 fn patch_zsh_completion(completion: String) -> String {
     let helper_function = r#"
-# Dynamic entry name completion helper
-_hc_entry_names() {
+# Dynamic card name completion helper
+_hc_card_names() {
     local -a entries
-    entries=(${(f)"$(hc __complete-entries 2>/dev/null)"})
-    _describe 'entry names' entries
+    entries=(${(f)"$(hc __complete-cards 2>/dev/null)"})
+    _describe 'card names' entries
 }
 
 "#;
 
     let completion = completion
         .replace(
-            "':name -- Entry name:_default'",
-            "':name -- Entry name: _hc_entry_names'",
+            "':name -- Card name:_default'",
+            "':name -- Card name: _hc_card_names'",
         )
         .replace(
-            "':entry -- Entry name:_default'",
-            "':entry -- Entry name: _hc_entry_names'",
+            "':card -- Card name:_default'",
+            "':card -- Card name: _hc_card_names'",
         );
 
     let completion = completion.replace(
@@ -111,19 +111,19 @@ _hc_entry_names() {
 fn print_fish_dynamic_completion() {
     println!(
         r#"
-# Dynamic entry name completion for fish
-function __hc_entry_names
-    hc __complete-entries 2>/dev/null
+# Dynamic card name completion for fish
+function __hc_card_names
+    hc __complete-cards 2>/dev/null
 end
 
-complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from get" -a "(__hc_entry_names)"
-complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from edit" -a "(__hc_entry_names)"
-complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from remove" -a "(__hc_entry_names)"
+complete -c hc -n "__fish_seen_subcommand_from card; and __fish_seen_subcommand_from get" -a "(__hc_card_names)"
+complete -c hc -n "__fish_seen_subcommand_from card; and __fish_seen_subcommand_from edit" -a "(__hc_card_names)"
+complete -c hc -n "__fish_seen_subcommand_from card; and __fish_seen_subcommand_from remove" -a "(__hc_card_names)"
 "#
     );
 }
 
-pub fn handle_complete_entries(deck_name: Option<&str>, config_dir: &Path) -> Result<()> {
+pub fn handle_complete_cards(deck_name: Option<&str>, config_dir: &Path) -> Result<()> {
     let deck_name = match deck_name {
         Some(name) => name.to_string(),
         None => {
@@ -135,9 +135,9 @@ pub fn handle_complete_entries(deck_name: Option<&str>, config_dir: &Path) -> Re
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, &deck_name, config.session_timeout_minutes);
 
-    let hand_names = session.load_entry_names().unwrap_or_default();
+    let card_names = session.load_card_names().unwrap_or_default();
 
-    for name in hand_names {
+    for name in card_names {
         println!("{}", name);
     }
 

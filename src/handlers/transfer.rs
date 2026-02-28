@@ -17,12 +17,12 @@ pub fn handle_export(
     let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     // Require Touch ID for export operations
-    require_biometric_auth(&ctx.inner.config, "Export entire vault")?;
+    require_biometric_auth(&ctx.inner.config, "Export entire hand")?;
 
-    let entries = ctx.inner.deck.list_hands();
+    let hands = ctx.inner.deck.list_hands();
 
-    let export_data: Vec<&Hand> = entries.into_iter().collect();
-    let json = serde_json::to_string_pretty(&export_data).context("Failed to serialize entries")?;
+    let export_data: Vec<&Hand> = hands.into_iter().collect();
+    let json = serde_json::to_string_pretty(&export_data).context("Failed to serialize cards")?;
 
     println!("\nSet a password to encrypt the export file:");
     let password = input::prompt_export_password()?;
@@ -33,7 +33,7 @@ pub fn handle_export(
     std::fs::write(file, &encrypted).context("Failed to write export file")?;
 
     println!(
-        "\n✓ Exported {} entries from vault '{}' to {} (encrypted)",
+        "\n✓ Exported {} cards from hand '{}' to {} (encrypted)",
         export_data.len(),
         ctx.deck_name,
         file
@@ -60,14 +60,14 @@ pub fn handle_import(
         .map_err(|_| anyhow::anyhow!("Failed to decrypt: wrong password or corrupted file"))?;
 
     let json = String::from_utf8(decrypted).context("Failed to decode decrypted data as UTF-8")?;
-    let entries: Vec<Hand> = serde_json::from_str(&json).context("Failed to parse import file")?;
+    let cards: Vec<Hand> = serde_json::from_str(&json).context("Failed to parse import file")?;
 
     let mut imported = 0;
     let mut overwritten = 0;
     let mut skipped = 0;
 
-    for entry in entries {
-        match ctx.inner.deck.import_hand(entry.clone(), overwrite) {
+    for card in cards {
+        match ctx.inner.deck.import_hand(card.clone(), overwrite) {
             Ok(was_overwritten) => {
                 if was_overwritten {
                     overwritten += 1;
@@ -76,7 +76,7 @@ pub fn handle_import(
                 }
             }
             Err(_) => {
-                println!("  Skipped '{}' (already exists)", entry.name());
+                println!("  Skipped '{}' (already exists)", card.name());
                 skipped += 1;
             }
         }
@@ -84,16 +84,13 @@ pub fn handle_import(
 
     ctx.save()?;
 
-    println!("\n✓ Import complete to vault '{}':", ctx.deck_name);
-    println!("  • {} entries imported", imported);
+    println!("\n✓ Import complete to hand '{}':", ctx.deck_name);
+    println!("  • {} cards imported", imported);
     if overwritten > 0 {
-        println!("  • {} entries overwritten", overwritten);
+        println!("  • {} cards overwritten", overwritten);
     }
     if skipped > 0 {
-        println!(
-            "  • {} entries skipped (use --overwrite to replace)",
-            skipped
-        );
+        println!("  • {} cards skipped (use --overwrite to replace)", skipped);
     }
 
     Ok(())

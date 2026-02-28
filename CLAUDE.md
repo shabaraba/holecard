@@ -83,7 +83,7 @@ src/
 - **Layered architecture**: main.rs → handlers → context → domain + infrastructure
 - **Single responsibility**: Each handler module groups related commands (deck/hand ops, session ops, etc.)
 - **Trait-based crypto abstraction**: `CryptoService` trait in domain, `CryptoServiceImpl` in infrastructure
-- **Session caching**: Derived key cached in system keyring with configurable timeout to avoid repeated password entry
+- **Session caching**: Derived key cached in system keyring with configurable timeout to avoid repeated password prompts
 - **Dual-key encryption**: Master password + secret key combined before key derivation for additional security
 - **Atomic writes**: Deck saves use temp file + rename pattern
 
@@ -106,5 +106,5 @@ src/
 
 - Config directory: `~/.holecard/`
 - Config file: `~/.holecard/config.toml`
-- Default hand path: `~/.holecard/vault.enc`
+- Default deck path: `~/.holecard/vault.enc`
 - Default session timeout: 60 minutes

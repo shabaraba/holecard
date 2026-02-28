@@ -28,14 +28,14 @@ Complete guide to SSH key storage, management, and ssh-agent integration.
 - Key rotation and security
 - Troubleshooting
 
-### [Multi-Vault Support](MULTI_VAULT.md)
-Managing multiple encrypted vaults for different contexts (personal, work, family).
+### [Multi-Hand Support](MULTI_VAULT.md)
+Managing multiple encrypted hands for different contexts (personal, work, family).
 
 **Topics:**
-- Creating and managing vaults
-- Switching between vaults
-- Vault use cases (personal/work separation)
-- Backup strategies per vault
+- Creating and managing hands
+- Switching between hands
+- Hand use cases (personal/work separation)
+- Backup strategies per hand
 - Best practices
 
 ## Developer Documentation
@@ -87,7 +87,7 @@ holecard/
     ├── README.md               # This file
     ├── SECURITY.md             # Security guide
     ├── SSH.md                  # SSH key management
-    └── MULTI_VAULT.md          # Multi-vault support
+    └── MULTI_VAULT.md          # Multi-hand support
 ```
 
 ## Contributing to Documentation

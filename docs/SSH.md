@@ -16,7 +16,7 @@ This guide covers Holecard's SSH key management features, including secure stora
 
 Holecard provides secure SSH key management with:
 
-- **Encrypted storage**: SSH keys stored in vault with Argon2id + AES-256-GCM
+- **Encrypted storage**: SSH keys stored in hand with Argon2id + AES-256-GCM
 - **ssh-agent integration**: Automatic key loading and unloading
 - **Alias support**: Connect using memorable aliases instead of full SSH strings
 - **Passphrase management**: Securely store and use key passphrases
@@ -33,8 +33,8 @@ Traditional SSH key management has several pain points:
 
 Holecard solves these problems:
 
-✅ Keys encrypted in vault with dual-key encryption
-✅ Automatic passphrase entry via vault
+✅ Keys encrypted in hand with dual-key encryption
+✅ Automatic passphrase via hand
 ✅ Centralized key management with aliases
 ✅ Keys never written to disk in plaintext
 
@@ -49,7 +49,7 @@ hc add github-key \
 # Connect via SSH (auto-loads key)
 hc ssh connect git@github.com
 
-# Or use entry name
+# Or use card name
 hc ssh connect github-key
 
 # List loaded keys
@@ -77,7 +77,7 @@ hc add my-server \
 - `alias`: SSH connection string or shorthand (optional, comma-separated for multiple)
 - `passphrase`: Key passphrase if encrypted (optional)
 
-### Interactive Entry
+### Interactive Card
 
 ```bash
 hc add my-server
@@ -125,13 +125,13 @@ hc add github-key \
 # Using alias
 hc ssh connect git@github.com
 
-# Using entry name
+# Using card name
 hc ssh connect github-key
 ```
 
 **What happens:**
-1. Holecard finds entry by alias or name
-2. Retrieves private key and passphrase from vault
+1. Holecard finds card by alias or name
+2. Retrieves private key and passphrase from hand
 3. Loads key into ssh-agent (with passphrase if needed)
 4. Executes `ssh` with the connection string
 5. Key remains loaded for session duration
@@ -156,13 +156,13 @@ hc ssh connect prod -- -p 2222 -v -o StrictHostKeyChecking=no
 For servers that use password authentication instead of keys:
 
 ```bash
-# Add entry with password field
+# Add card with password field
 hc add my-server \
   -f username=user \
   -f password="mypassword" \
   -f alias="user@server.com"
 
-# Connect (will use sshpass for password entry)
+# Connect (will use sshpass for password authentication)
 hc ssh connect user@server.com
 ```
 
@@ -188,13 +188,13 @@ Shows:
 - Key fingerprints (SHA256)
 - Comment/identifier
 
-### List Vault SSH Entries
+### List Hand SSH Cards
 
 ```bash
 hc list
 ```
 
-Shows all entries in vault, including SSH keys (entries with `private_key` field).
+Shows all cards in hand, including SSH keys (cards with `private_key` field).
 
 ### Load Key Manually
 
@@ -212,14 +212,14 @@ hc ssh load my-server --lifetime 28800
 # Remove specific key from ssh-agent
 hc ssh unload my-server
 
-# Lock vault (removes all loaded keys)
+# Lock hand (removes all loaded keys)
 hc lock
 ```
 
 ### Update SSH Key
 
 ```bash
-# Edit existing entry
+# Edit existing card
 hc edit my-server --file private_key=~/.ssh/new_key
 
 # Update alias
@@ -245,9 +245,9 @@ hc ssh load github-key
 ssh -A user@jumpbox.example.com
 ```
 
-### Multiple Keys per Entry
+### Multiple Keys per Card
 
-You can store multiple keys in separate entries with the same alias:
+You can store multiple keys in separate cards with the same alias:
 
 ```bash
 # Personal GitHub key
@@ -305,9 +305,9 @@ rm ~/.ssh/id_ed25519_new
 
 ### Key Storage
 
-✅ **Encrypted in vault**: Keys stored with Argon2id + AES-256-GCM
+✅ **Encrypted in hand**: Keys stored with Argon2id + AES-256-GCM
 ✅ **No plaintext on disk**: Keys never written to `~/.ssh/` unless you explicitly do so
-✅ **Passphrase protection**: Key passphrases stored encrypted in vault
+✅ **Passphrase protection**: Key passphrases stored encrypted in hand
 
 ### ssh-agent Security
 
@@ -322,8 +322,8 @@ rm ~/.ssh/id_ed25519_new
 
 ### Passphrase Best Practices
 
-- Use strong passphrases for SSH keys (even when in vault)
-- Different passphrase than vault master password
+- Use strong passphrases for SSH keys (even when in hand)
+- Different passphrase than hand master password
 - Consider passphraseless keys only for automation use cases
 
 ### Audit Trail
@@ -332,7 +332,7 @@ rm ~/.ssh/id_ed25519_new
 # Check what keys are loaded
 hc ssh list
 
-# View SSH entry details (without exposing key)
+# View SSH card details (without exposing key)
 hc get my-server
 
 # Export for backup (encrypted)
@@ -350,7 +350,7 @@ ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_new
 # 2. Add public key to servers
 ssh-copy-id -i ~/.ssh/id_ed25519_new.pub user@server.com
 
-# 3. Update Holecard entry
+# 3. Update Holecard card
 hc edit my-server --file private_key=~/.ssh/id_ed25519_new
 
 # 4. Remove old key from servers
@@ -386,7 +386,7 @@ ssh -v user@server.com
 
 ### "Bad passphrase"
 
-Key passphrase in vault is incorrect. Update it:
+Key passphrase in hand is incorrect. Update it:
 
 ```bash
 hc edit my-server -f passphrase="correct-passphrase"
@@ -453,7 +453,7 @@ ssh -J user@bastion.example.com user@internal.example.com
 ## Related Documentation
 
 - [Security Guide](SECURITY.md) - Encryption and security model
-- [Multi-Vault Support](MULTI_VAULT.md) - Managing multiple vaults
+- [Multi-Hand Support](MULTI_VAULT.md) - Managing multiple hands
 
 ## License
 

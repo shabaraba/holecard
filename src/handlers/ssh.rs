@@ -103,7 +103,7 @@ fn handle_ssh_add(
     if let Some(alias_value) = alias {
         // Pattern 1: Alias only (SSH config managed)
         cards.insert("alias".to_string(), alias_value);
-        println!("✓ SSH entry '{}' created with alias authentication", name);
+        println!("✓ SSH card '{}' created with alias authentication", name);
     } else {
         // Pattern 2 & 3: Direct management (username + hostname required)
         let username_value =
@@ -121,10 +121,7 @@ fn handle_ssh_add(
         if let Some(password_value) = password {
             // Pattern 2: Password authentication
             cards.insert("password".to_string(), password_value);
-            println!(
-                "✓ SSH entry '{}' created with password authentication",
-                name
-            );
+            println!("✓ SSH card '{}' created with password authentication", name);
         } else if let Some(private_key_path_value) = private_key_path {
             // Pattern 3: Key authentication
             let expanded_private_key_path = expand_tilde(&private_key_path_value)?;
@@ -155,7 +152,7 @@ fn handle_ssh_add(
                 cards.insert("passphrase".to_string(), passphrase_value);
             }
 
-            println!("✓ SSH entry '{}' created with key authentication", name);
+            println!("✓ SSH card '{}' created with key authentication", name);
         } else {
             anyhow::bail!("Either --password or --private-key is required when not using --alias");
         }
@@ -165,7 +162,7 @@ fn handle_ssh_add(
     ctx.inner.deck.add_hand(card)?;
     ctx.save()?;
 
-    println!("✓ Entry '{}' saved to deck", name);
+    println!("✓ Card '{}' saved to hand", name);
 
     Ok(())
 }
@@ -180,7 +177,7 @@ fn expand_tilde(path: &str) -> Result<String> {
 }
 
 fn handle_ssh_load(
-    entry_name: &str,
+    card_name: &str,
     lifetime: Option<u32>,
     deck_name: Option<&str>,
     keyring: &KeyringManager,
@@ -190,13 +187,13 @@ fn handle_ssh_load(
     let card = ctx
         .inner
         .deck
-        .get_hand(entry_name)
-        .map_err(|_| anyhow::anyhow!("Entry '{}' not found", entry_name))?;
+        .get_hand(card_name)
+        .map_err(|_| anyhow::anyhow!("Card '{}' not found", card_name))?;
 
     let private_key = card
         .cards
         .get("private_key")
-        .context("Entry does not contain 'private_key' field")?;
+        .context("Card does not contain 'private_key' field")?;
 
     validate_private_key(private_key)?;
 
@@ -205,7 +202,7 @@ fn handle_ssh_load(
     let agent = SshAgent::connect()?;
     agent.add_identity(private_key, passphrase, lifetime)?;
 
-    println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
+    println!("✓ SSH key '{}' loaded into ssh-agent", card_name);
     match lifetime {
         Some(0) => println!("  Lifetime: forever"),
         Some(sec) => println!("  Lifetime: {} seconds", sec),
@@ -223,11 +220,10 @@ fn handle_ssh_unload(
 ) -> Result<()> {
     let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let public_key = if let Ok(entry) = ctx.inner.deck.get_hand(identifier) {
-        entry
-            .cards
+    let public_key = if let Ok(hand) = ctx.inner.deck.get_hand(identifier) {
+        hand.cards
             .get("public_key")
-            .context("Entry does not contain 'public_key' field")?
+            .context("Card does not contain 'public_key' field")?
             .clone()
     } else {
         identifier.to_string()
@@ -246,18 +242,18 @@ fn handle_ssh_list(
     config_dir: &Path,
 ) -> Result<()> {
     let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
-    let entries = ctx.inner.deck.list_hands();
+    let hands = ctx.inner.deck.list_hands();
 
-    let ssh_entries: Vec<_> = entries.iter().filter(|entry| is_ssh_hand(entry)).collect();
+    let ssh_cards: Vec<_> = hands.iter().filter(|hand| is_ssh_hand(hand)).collect();
 
-    if ssh_entries.is_empty() {
-        println!("No SSH entries found in deck");
+    if ssh_cards.is_empty() {
+        println!("No SSH cards found in deck");
     } else {
-        println!("\nSSH Entries:\n");
-        for entry in ssh_entries {
-            let auth_type = get_auth_type(entry);
-            let target = get_ssh_target(entry);
-            println!("  {} ({})", entry.name(), auth_type);
+        println!("\nSSH Cards:\n");
+        for card in ssh_cards {
+            let auth_type = get_auth_type(card);
+            let target = get_ssh_target(card);
+            println!("  {} ({})", card.name(), auth_type);
             if let Some(t) = target {
                 println!("    → {}", t);
             }
@@ -302,10 +298,10 @@ fn handle_ssh_connect(
 ) -> Result<()> {
     let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let entry_name = find_hand_by_name_or_alias(&ctx.inner.deck, target)
-        .ok_or_else(|| anyhow::anyhow!("No entry found with name or alias '{}'", target))?;
+    let card_name = find_hand_by_name_or_alias(&ctx.inner.deck, target)
+        .ok_or_else(|| anyhow::anyhow!("No card found with name or alias '{}'", target))?;
 
-    let card = ctx.inner.deck.get_hand(&entry_name)?;
+    let card = ctx.inner.deck.get_hand(&card_name)?;
 
     let ssh_target = if target.contains('@') {
         target.to_string()
@@ -315,14 +311,12 @@ fn handle_ssh_connect(
             .cards
             .get("host")
             .or_else(|| card.cards.get("alias"))
-            .context(
-                "Entry has no 'host' or 'alias' field and target is not in user@host format",
-            )?;
+            .context("Card has no 'host' or 'alias' field and target is not in user@host format")?;
 
         // Parse CSV and try to match the provided target exactly
         let aliases: Vec<String> = csv_value.split(',').map(|s| s.trim().to_string()).collect();
 
-        // Try exact match first, otherwise use first entry
+        // Try exact match first, otherwise use first card
         aliases
             .iter()
             .find(|alias| *alias == target)
@@ -337,8 +331,8 @@ fn handle_ssh_connect(
 
     if !has_alias && !has_private_key && !has_password {
         anyhow::bail!(
-            "Entry '{}' must have either 'alias', 'private_key', or 'password' field for SSH authentication",
-            entry_name
+            "Card '{}' must have either 'alias', 'private_key', or 'password' field for SSH authentication",
+            card_name
         );
     }
 
@@ -354,7 +348,7 @@ fn handle_ssh_connect(
         let agent = SshAgent::connect()?;
         agent.add_identity(private_key, passphrase, None)?;
 
-        println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
+        println!("✓ SSH key '{}' loaded into ssh-agent", card_name);
 
         Command::new("ssh")
             .arg(&ssh_target)

@@ -36,7 +36,7 @@ fn handle_totp_add(
     let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     let totp_entry = ctx.inner.deck.get_hand_mut("totp").map_err(|_| {
-        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+        anyhow::anyhow!("TOTP card not found. Please reinitialize hand with 'hc init'")
     })?;
 
     if totp_entry.cards.contains_key(service_name) {
@@ -65,7 +65,7 @@ fn handle_totp_get(
 ) -> Result<()> {
     let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
     let totp_entry = ctx.inner.deck.get_hand("totp").map_err(|_| {
-        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+        anyhow::anyhow!("TOTP card not found. Please reinitialize hand with 'hc init'")
     })?;
 
     if let Some(secret) = totp_entry.cards.get(service_name) {
@@ -113,7 +113,7 @@ fn handle_totp_rm(
     let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     let totp_entry = ctx.inner.deck.get_hand_mut("totp").map_err(|_| {
-        anyhow::anyhow!("TOTP entry not found. Please reinitialize vault with 'hc init'")
+        anyhow::anyhow!("TOTP card not found. Please reinitialize hand with 'hc init'")
     })?;
 
     if totp_entry.cards.remove(service_name).is_some() {

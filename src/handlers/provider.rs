@@ -235,7 +235,7 @@ fn handle_secrets_add(
     let provider = create_provider(config)?;
 
     let parts: Vec<&str> = card_field.split('.').collect();
-    let (entry_name, field_name) = if parts.len() == 2 {
+    let (card_name, field_name) = if parts.len() == 2 {
         (parts[0], Some(parts[1]))
     } else if parts.len() == 1 {
         (parts[0], None)
@@ -245,8 +245,8 @@ fn handle_secrets_add(
 
     let card = ctx
         .deck
-        .get_hand(entry_name)
-        .map_err(|_| ProviderError::CardNotFound(entry_name.to_string()))?;
+        .get_hand(card_name)
+        .map_err(|_| ProviderError::CardNotFound(card_name.to_string()))?;
 
     if expand {
         if field_name.is_some() {
@@ -289,7 +289,7 @@ fn handle_secrets_add(
         let value = card.cards.get(field).ok_or_else(|| {
             ProviderError::ConfigError(format!(
                 "Field '{}' not found in card '{}'",
-                field, entry_name
+                field, card_name
             ))
         })?;
 

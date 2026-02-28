@@ -16,15 +16,15 @@ pub struct SecretResolver;
 impl SecretResolver {
     pub fn resolve(
         uri_str: &str,
-        default_vault: Option<&str>,
+        default_hand: Option<&str>,
         keyring: &KeyringManager,
         config_dir: &Path,
     ) -> Result<String> {
         let expanded = SecretUri::expand_env_vars(uri_str);
         let uri = SecretUri::parse(&expanded)?;
 
-        let vault_name = uri.vault.as_deref().or(default_vault);
-        let ctx = MultiDeckContext::load(vault_name, keyring, config_dir)?;
+        let hand_name = uri.hand.as_deref().or(default_hand);
+        let ctx = MultiDeckContext::load(hand_name, keyring, config_dir)?;
 
         let card = ctx
             .inner
@@ -39,7 +39,7 @@ impl SecretResolver {
 
     pub fn resolve_template(
         template: &str,
-        default_vault: Option<&str>,
+        default_hand: Option<&str>,
         keyring: &KeyringManager,
         config_dir: &Path,
     ) -> Result<String> {
@@ -50,7 +50,7 @@ impl SecretResolver {
             let full_match = cap.get(0).unwrap();
             let uri_str = full_match.as_str().trim();
 
-            match Self::resolve(uri_str, default_vault, keyring, config_dir) {
+            match Self::resolve(uri_str, default_hand, keyring, config_dir) {
                 Ok(value) => {
                     replacements.push((full_match.range(), value));
                 }

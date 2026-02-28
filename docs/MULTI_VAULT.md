@@ -1,159 +1,159 @@
-# Multi-Vault Support Guide
+# Multi-Hand Support Guide
 
-This guide covers how to use Holecard's multi-vault feature to manage multiple encrypted vaults (e.g., personal, work, family).
+This guide covers how to use Holecard's multi-hand feature to manage multiple encrypted hands (e.g., personal, work, family).
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
-- [Vault Management](#vault-management)
-- [Working with Multiple Vaults](#working-with-multiple-vaults)
+- [Hand Management](#hand-management)
+- [Working with Multiple Hands](#working-with-multiple-vaults)
 - [Use Cases](#use-cases)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-Multi-vault support allows you to:
+Multi-hand support allows you to:
 
 - **Separate concerns**: Personal vs. work vs. family passwords
 - **Different security levels**: High-security vs. convenience vaults
 - **Team collaboration**: Shared vaults with team members
 - **Compliance**: Isolate sensitive data per regulatory requirements
 
-Each vault has:
+Each hand has:
 - Independent master password
 - Separate secret key (in system keyring)
-- Isolated entries and configuration
+- Isolated cards and configuration
 - Independent session management
 
 ## Quick Start
 
 ```bash
-# Create personal vault (default)
+# Create personal hand (default)
 hc init
 
-# Create work vault
-hc vault add work ~/.holecard/work.enc
-hc vault init work
+# Create work hand
+hc hand add work ~/.holecard/work.enc
+hc hand init work
 
-# Switch to work vault
-hc vault switch work
+# Switch to work hand
+hc hand switch work
 
-# Add entry to work vault
+# Add card to work hand
 hc add jira -f username=user -f password=pass
 
-# Switch back to personal vault
-hc vault switch default
+# Switch back to personal hand
+hc hand switch default
 
-# List all vaults
-hc vault list
+# List all hands
+hc hand list
 ```
 
-## Vault Management
+## Hand Management
 
-### Creating Vaults
+### Creating Hands
 
 ```bash
-# Add new vault
-hc vault add <name> <path>
+# Add new hand
+hc hand add <name> <path>
 
 # Examples:
-hc vault add work ~/.holecard/work.enc
-hc vault add family ~/Dropbox/family-vault.enc
-hc vault add shared /mnt/shared/team-vault.enc
+hc hand add work ~/.holecard/work.enc
+hc hand add family ~/Dropbox/family-hand.enc
+hc hand add shared /mnt/shared/team-hand.enc
 ```
 
-### Initializing Vaults
+### Initializing Hands
 
 ```bash
-# Initialize vault (set master password)
-hc vault init <name>
+# Initialize hand (set master password)
+hc hand init <name>
 
 # Example:
-hc vault init work
-# Prompts for master password for work vault
+hc hand init work
+# Prompts for master password for work hand
 ```
 
-### Switching Vaults
+### Switching Hands
 
 ```bash
-# Switch active vault
-hc vault switch <name>
+# Switch active hand
+hc hand switch <name>
 
 # Examples:
-hc vault switch work
-hc vault switch default
+hc hand switch work
+hc hand switch default
 
-# Verify current vault
+# Verify current hand
 hc status
 ```
 
-### Listing Vaults
+### Listing Hands
 
 ```bash
-# List all configured vaults
-hc vault list
+# List all configured hands
+hc hand list
 
 # Example output:
 # Vaults:
-# * default - ~/.holecard/vault.enc (active)
+# * default - ~/.holecard/hand.enc (active)
 #   work - ~/.holecard/work.enc
-#   family - ~/Dropbox/family-vault.enc
+#   family - ~/Dropbox/family-hand.enc
 ```
 
-### Removing Vaults
+### Removing Hands
 
 ```bash
-# Remove vault from registry (doesn't delete file)
-hc vault rm <name>
+# Remove hand from registry (doesn't delete file)
+hc hand rm <name>
 
 # Example:
-hc vault rm old-work
+hc hand rm old-work
 ```
 
-**Note**: This only removes the vault from Holecard's registry. The encrypted vault file remains on disk.
+**Note**: This only removes the hand from Holecard's registry. The encrypted hand file remains on disk.
 
-### Changing Active Vault Password
+### Changing Active Hand Password
 
 ```bash
-# Switch to target vault
-hc vault switch work
+# Switch to target hand
+hc hand switch work
 
 # Change password
 hc change-password
 ```
 
-## Working with Multiple Vaults
+## Working with Multiple Hands
 
-### Vault Context
+### Hand Context
 
-All commands operate on the **active vault**:
+All commands operate on the **active hand**:
 
 ```bash
-# Current vault context
+# Current hand context
 hc status
 
-# Add to current vault
-hc add entry1 -f key=value
+# Add to current hand
+hc add card1 -f key=value
 
-# Switch vault
-hc vault switch work
+# Switch hand
+hc hand switch work
 
-# Add to work vault
-hc add entry2 -f key=value
+# Add to work hand
+hc add card2 -f key=value
 ```
 
-### Cross-Vault Operations
+### Cross-Hand Operations
 
-Currently, Holecard doesn't support cross-vault operations. To move entries between vaults:
+Currently, Holecard doesn't support cross-hand operations. To move cards between hands:
 
 ```bash
-# Export from source vault
-hc vault switch personal
+# Export from source hand
+hc hand switch personal
 hc export ~/temp-export.json
 
-# Import to destination vault
-hc vault switch work
+# Import to destination hand
+hc hand switch work
 hc import ~/temp-export.json
 
 # Clean up
@@ -162,15 +162,15 @@ rm ~/temp-export.json
 
 ### Session Management
 
-Each vault has an independent session:
+Each hand has an independent session:
 
 ```bash
-# Lock current vault
+# Lock current hand
 hc lock
 
-# Lock all vaults
-hc vault switch default && hc lock
-hc vault switch work && hc lock
+# Lock all hands
+hc hand switch default && hc lock
+hc hand switch work && hc lock
 ```
 
 ## Use Cases
@@ -179,16 +179,16 @@ hc vault switch work && hc lock
 
 ```bash
 # Setup
-hc vault add work ~/.holecard/work.enc
-hc vault init work
+hc hand add work ~/.holecard/work.enc
+hc hand init work
 
 # Personal passwords
-hc vault switch default
+hc hand switch default
 hc add gmail -f username=personal@gmail.com -f password=...
 hc add bank -f username=... -f password=...
 
 # Work passwords
-hc vault switch work
+hc hand switch work
 hc add jira -f username=work@company.com -f password=...
 hc add aws -f access_key=... -f secret_key=...
 ```
@@ -198,47 +198,47 @@ hc add aws -f access_key=... -f secret_key=...
 - Different master passwords for different threat models
 - Selective backup/sharing strategies
 
-### Family Vault
+### Family Hand
 
 ```bash
-# Create shared family vault
-hc vault add family ~/Dropbox/family-vault.enc
-hc vault init family
+# Create shared family hand
+hc hand add family ~/Dropbox/family-hand.enc
+hc hand init family
 
 # Add family credentials
-hc vault switch family
+hc hand switch family
 hc add netflix -f email=family@example.com -f password=...
 hc add wifi -f ssid=HomeWiFi -f password=...
 hc add router -f admin_user=admin -f admin_pass=...
 ```
 
 **Sharing:**
-- Export vault: `hc export ~/family-backup.json`
+- Export hand: `hc export ~/family-backup.json`
 - Share encrypted export file with family members
 - Each member imports: `hc import ~/family-backup.json`
 
 ### Security Levels
 
 ```bash
-# High-security vault (sensitive data)
-hc vault add high-sec ~/.holecard/high-security.enc
-hc vault init high-sec
+# High-security hand (sensitive data)
+hc hand add high-sec ~/.holecard/high-security.enc
+hc hand init high-sec
 hc config session-timeout 5  # Short timeout
 
-# Convenience vault (low-risk data)
-hc vault add convenience ~/.holecard/convenience.enc
-hc vault init convenience
+# Convenience hand (low-risk data)
+hc hand add convenience ~/.holecard/convenience.enc
+hc hand init convenience
 hc config session-timeout 120  # Long timeout
 ```
 
-### Team/Project Vaults
+### Team/Project Hands
 
 ```bash
-# Project-specific vault
-hc vault add project-alpha ~/work/alpha-secrets.enc
-hc vault init project-alpha
+# Project-specific hand
+hc hand add project-alpha ~/work/alpha-secrets.enc
+hc hand init project-alpha
 
-hc vault switch project-alpha
+hc hand switch project-alpha
 hc add staging -f db_host=... -f db_pass=...
 hc add prod -f db_host=... -f db_pass=...
 ```
@@ -247,7 +247,7 @@ hc add prod -f db_host=... -f db_pass=...
 
 ### Naming Conventions
 
-Use descriptive vault names:
+Use descriptive hand names:
 
 ✅ Good:
 - `personal`
@@ -257,68 +257,68 @@ Use descriptive vault names:
 - `high-security`
 
 ❌ Bad:
-- `vault1`
+- `hand1`
 - `temp`
 - `asdf`
 
 ### File Organization
 
-Organize vault files logically:
+Organize hand files logically:
 
 ```
 ~/.holecard/
-├── vault.enc           # Default personal vault
-├── work.enc           # Work vault
+├── hand.enc           # Default personal hand
+├── work.enc           # Work hand
 └── config.toml        # Holecard config
 
 ~/Dropbox/
-└── family-vault.enc   # Shared family vault
+└── family-hand.enc   # Shared family hand
 
 ~/work/
-└── project-secrets.enc  # Work project vault
+└── project-secrets.enc  # Work project hand
 ```
 
 ### Backup Strategy
 
-Different backup strategies per vault:
+Different backup strategies per hand:
 
 ```bash
-# Personal vault - local backup
-hc vault switch personal
+# Personal hand - local backup
+hc hand switch personal
 hc export ~/Backups/personal-$(date +%Y%m%d).json
 
-# Work vault - no backup (company policy)
+# Work hand - no backup (company policy)
 # (or encrypted cloud backup)
 
-# Family vault - cloud backup
-hc vault switch family
+# Family hand - cloud backup
+hc hand switch family
 hc export ~/Dropbox/Backups/family-$(date +%Y%m%d).json
 ```
 
 ### Security Configuration
 
-Adjust security per vault:
+Adjust security per hand:
 
 ```bash
-# High-security vault
-hc vault switch high-sec
+# High-security hand
+hc hand switch high-sec
 hc config session-timeout 5
 hc config enable-biometric false  # Require password
 
-# Convenience vault
-hc vault switch convenience
+# Convenience hand
+hc hand switch convenience
 hc config session-timeout 120
 hc config enable-biometric true   # Enable Touch ID
 ```
 
-### Vault Registry
+### Hand Registry
 
-The vault registry is stored in:
+The hand registry is stored in:
 ```
 ~/.holecard/vault_registry.json
 ```
 
-This file maps vault names to file paths. Back it up:
+This file maps hand names to file paths. Back it up:
 
 ```bash
 cp ~/.holecard/vault_registry.json ~/Backups/
@@ -326,8 +326,8 @@ cp ~/.holecard/vault_registry.json ~/Backups/
 
 ### Master Password Management
 
-**Different passwords per vault:**
-- Use unique master passwords for each vault
+**Different passwords per hand:**
+- Use unique master passwords for each hand
 - Higher security for sensitive vaults
 - Consider password manager for master passwords (ironic but practical)
 
@@ -338,32 +338,32 @@ cp ~/.holecard/vault_registry.json ~/Backups/
 
 ## Advanced Usage
 
-### Default Vault
+### Default Hand
 
-The `default` vault is created during initial `hc init`:
+The `default` hand is created during initial `hc init`:
 
 ```bash
 # List vaults (shows default)
-hc vault list
+hc hand list
 
-# Default vault location
-~/.holecard/vault.enc
+# Default hand location
+~/.holecard/hand.enc
 ```
 
-To change default vault location:
+To change default hand location:
 
 ```bash
-hc config vault-path ~/new-location.enc
+hc config deck-path ~/new-location.enc
 ```
 
-### Switching Vaults in Scripts
+### Switching Hands in Scripts
 
 ```bash
 #!/bin/bash
-# Deploy script using work vault
+# Deploy script using work hand
 
-# Switch to work vault
-hc vault switch work
+# Switch to work hand
+hc hand switch work
 
 # Use secrets
 AWS_KEY=$(hc read hc://work/aws/access_key)
@@ -373,70 +373,70 @@ AWS_SECRET=$(hc read hc://work/aws/secret_key)
 aws s3 sync ./dist s3://bucket --region us-east-1
 ```
 
-### Temporary Vaults
+### Temporary Hands
 
 For one-off projects:
 
 ```bash
-# Create temporary vault
-hc vault add temp-project /tmp/temp-vault.enc
-hc vault init temp-project
+# Create temporary hand
+hc hand add temp-project /tmp/temp-hand.enc
+hc hand init temp-project
 
 # Use it
-hc vault switch temp-project
-# ... add entries ...
+hc hand switch temp-project
+# ... add cards ...
 
 # When done
-hc vault switch default
-hc vault rm temp-project
-rm /tmp/temp-vault.enc
+hc hand switch default
+hc hand rm temp-project
+rm /tmp/temp-hand.enc
 ```
 
 ## Troubleshooting
 
-### "Vault not found"
+### "Hand not found"
 
-Vault name not in registry:
+Hand name not in registry:
 
 ```bash
-# Check registered vaults
-hc vault list
+# Check registered hands
+hc hand list
 
-# Add vault if missing
-hc vault add work ~/.holecard/work.enc
+# Add hand if missing
+hc hand add work ~/.holecard/work.enc
 ```
 
-### "Failed to initialize vault"
+### "Failed to initialize hand"
 
-Vault file already exists:
+Hand file already exists:
 
 ```bash
-# Use existing vault (don't reinitialize)
-hc vault switch work
+# Use existing hand (don't reinitialize)
+hc hand switch work
 
 # Or delete and recreate
 rm ~/.holecard/work.enc
-hc vault init work
+hc hand init work
 ```
 
-### Wrong Vault Active
+### Wrong Hand Active
 
 ```bash
-# Check current vault
+# Check current hand
 hc status
 
-# Switch to correct vault
-hc vault switch <correct-name>
+# Switch to correct hand
+hc hand switch <correct-name>
 ```
 
 ### Session Confusion
 
-Each vault has independent session:
+Each hand has independent session:
 
 ```bash
-# Lock all vaults
-for vault in $(hc vault list | awk '{print $2}'); do
-  hc vault switch $vault
+# Lock all hands
+for hand_item in $(hc hand list | awk '{print $2}'); do
+  hc hand switch $hand_item
   hc lock
 done
 ```
@@ -444,7 +444,7 @@ done
 ## Related Documentation
 
 - [Security Guide](SECURITY.md) - Encryption and security model
-- [SSH Key Management](SSH.md) - Managing SSH keys across vaults
+- [SSH Key Management](SSH.md) - Managing SSH keys across hands
 
 ## License
 

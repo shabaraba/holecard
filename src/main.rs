@@ -150,7 +150,7 @@ fn main() -> Result<()> {
         }
         Commands::Completion { shell } => handlers::completion::handle_completion(&shell),
         Commands::__CompleteCards { hand } => {
-            handlers::completion::handle_complete_entries(hand.as_deref(), &config_dir)
+            handlers::completion::handle_complete_cards(hand.as_deref(), &config_dir)
         }
     }
 }
