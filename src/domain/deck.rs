@@ -16,10 +16,10 @@ impl Deck {
     }
 
     pub fn add_hand(&mut self, hand: Hand) -> Result<(), DeckError> {
-        if self.hands.contains_key(&hand.name) {
-            return Err(DeckError::HandAlreadyExists(hand.name.clone()));
+        if self.hands.contains_key(hand.name()) {
+            return Err(DeckError::HandAlreadyExists(hand.name().to_string()));
         }
-        self.hands.insert(hand.name.clone(), hand);
+        self.hands.insert(hand.name().to_string(), hand);
         Ok(())
     }
 
@@ -43,20 +43,30 @@ impl Deck {
 
     pub fn list_hands(&self) -> Vec<&Hand> {
         let mut hands: Vec<&Hand> = self.hands.values().collect();
-        hands.sort_by(|a, b| a.name.cmp(&b.name));
+        hands.sort_by(|a, b| a.name().cmp(b.name()));
         hands
     }
 
+    pub fn rename_hand(&mut self, old_name: &str, new_name: String) -> Result<(), DeckError> {
+        if self.hands.contains_key(&new_name) {
+            return Err(DeckError::HandAlreadyExists(new_name));
+        }
+        let mut hand = self.remove_hand(old_name)?;
+        hand.set_name(new_name.clone());
+        self.hands.insert(new_name, hand);
+        Ok(())
+    }
+
     pub fn import_hand(&mut self, hand: Hand, overwrite: bool) -> Result<bool, DeckError> {
-        if self.hands.contains_key(&hand.name) {
+        if self.hands.contains_key(hand.name()) {
             if overwrite {
-                self.hands.insert(hand.name.clone(), hand);
+                self.hands.insert(hand.name().to_string(), hand);
                 Ok(true)
             } else {
-                Err(DeckError::HandAlreadyExists(hand.name.clone()))
+                Err(DeckError::HandAlreadyExists(hand.name().to_string()))
             }
         } else {
-            self.hands.insert(hand.name.clone(), hand);
+            self.hands.insert(hand.name().to_string(), hand);
             Ok(false)
         }
     }

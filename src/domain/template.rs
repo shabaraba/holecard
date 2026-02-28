@@ -7,8 +7,8 @@ pub struct TemplateEngine;
 impl TemplateEngine {
     /// Render a template string with card data
     /// Supports:
-    /// - {{hand.field}} - specific field from card
-    /// - {{hand}} - all fields as KEY=value format
+    /// - {{card.field}} - specific card from hand
+    /// - {{card}} - all cards as KEY=value format
     #[allow(dead_code)]
     pub fn render(template: &str, hand: &Hand) -> Result<String> {
         let re = Regex::new(r"\{\{([^}]+)\}\}").context("Failed to compile regex")?;
@@ -40,7 +40,7 @@ impl TemplateEngine {
                 }
             } else {
                 anyhow::bail!(
-                    "Invalid template syntax: {}. Use {{{{hand.field}}}} or {{{{hand}}}}",
+                    "Invalid template syntax: {}. Use {{{{card.field}}}} or {{{{card}}}}",
                     var_name
                 );
             };
@@ -51,7 +51,7 @@ impl TemplateEngine {
         if !missing_fields.is_empty() {
             anyhow::bail!(
                 "Missing fields in card '{}': {}",
-                hand.name,
+                hand.name(),
                 missing_fields.join(", ")
             );
         }

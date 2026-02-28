@@ -257,7 +257,7 @@ fn handle_ssh_list(
         for entry in ssh_entries {
             let auth_type = get_auth_type(entry);
             let target = get_ssh_target(entry);
-            println!("  {} ({})", entry.name, auth_type);
+            println!("  {} ({})", entry.name(), auth_type);
             if let Some(t) = target {
                 println!("    → {}", t);
             }
@@ -310,11 +310,25 @@ fn handle_ssh_connect(
     let ssh_target = if target.contains('@') {
         target.to_string()
     } else {
-        card.cards
+        // Get CSV list from host or alias field
+        let csv_value = card
+            .cards
             .get("host")
             .or_else(|| card.cards.get("alias"))
-            .and_then(|value| value.split(',').next().map(|s| s.trim().to_string()))
-            .context("Entry has no 'host' or 'alias' field and target is not in user@host format")?
+            .context(
+                "Entry has no 'host' or 'alias' field and target is not in user@host format",
+            )?;
+
+        // Parse CSV and try to match the provided target exactly
+        let aliases: Vec<String> = csv_value.split(',').map(|s| s.trim().to_string()).collect();
+
+        // Try exact match first, otherwise use first entry
+        aliases
+            .iter()
+            .find(|alias| *alias == target)
+            .cloned()
+            .or_else(|| aliases.first().cloned())
+            .context("No valid alias found in CSV list")?
     };
 
     let has_alias = card.cards.contains_key("alias");

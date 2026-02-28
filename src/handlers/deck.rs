@@ -10,8 +10,8 @@ use crate::multi_deck_context::MultiDeckContext;
 
 pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     println!("⚠️  'hc init' is deprecated.");
-    println!("    Use 'hc vault create default' instead.\n");
-    println!("Proceeding with vault creation...\n");
+    println!("    Use 'hc hand create default' instead.\n");
+    println!("Proceeding with hand creation...\n");
 
     crate::handlers::deck_management::handle_deck(
         crate::cli::commands::HandCommands::Create {
@@ -105,7 +105,7 @@ pub fn handle_get(
         .get_hand(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    println!("\nEntry: {}", card.name);
+    println!("\nEntry: {}", card.name());
     println!("Created: {}", card.created_at.format("%Y-%m-%d %H:%M:%S"));
     println!("Updated: {}", card.updated_at.format("%Y-%m-%d %H:%M:%S"));
 
@@ -176,7 +176,7 @@ pub fn handle_list(
 
     println!("\nEntries:");
     for entry in entries {
-        println!("  • {}", entry.name);
+        println!("  • {}", entry.name());
         if !entry.cards.is_empty() {
             println!(
                 "    Fields: {}",
@@ -257,7 +257,7 @@ pub fn handle_edit_interactive(
         .deck
         .get_hand_mut(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
-    println!("Editing entry: {}", card.name);
+    println!("Editing entry: {}", card.name());
 
     loop {
         match input::prompt_edit_menu(card)? {

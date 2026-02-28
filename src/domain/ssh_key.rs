@@ -32,7 +32,7 @@ pub fn find_hand_by_name_or_alias(deck: &Deck, target: &str) -> Option<String> {
         if let Some(alias_str) = hand.cards.get("alias") {
             for alias in alias_str.split(',').map(|s: &str| s.trim()) {
                 if alias == target {
-                    return Some(hand.name.clone());
+                    return Some(hand.name().to_string());
                 }
             }
         }

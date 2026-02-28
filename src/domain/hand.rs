@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hand {
-    pub name: String,
+    name: String,
     pub cards: HashMap<String, String>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -21,6 +21,15 @@ impl Hand {
             created_at: now,
             updated_at: now,
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub(crate) fn set_name(&mut self, name: String) {
+        self.name = name;
+        self.updated_at = Utc::now();
     }
 
     pub fn update_notes(&mut self, notes: Option<String>) {

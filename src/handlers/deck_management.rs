@@ -184,23 +184,32 @@ fn handle_move(
         .map_err(|e| anyhow::anyhow!("{}", e))?
         .clone();
 
+    // Load target first to ensure it exists and is accessible
+    let mut target_ctx = MultiDeckContext::load(Some(&to_vault), keyring, config_dir)?;
+
+    // Add to target and save before removing from source (safe order)
+    target_ctx
+        .inner
+        .deck
+        .add_hand(card.clone())
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    target_ctx.save().context("Failed to save to target deck")?;
+
+    // Only remove from source after successful target save
     source_ctx
         .inner
         .deck
         .remove_hand(&entry_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    source_ctx.save()?;
-
-    let mut target_ctx = MultiDeckContext::load(Some(&to_vault), keyring, config_dir)?;
-
-    target_ctx
-        .inner
-        .deck
-        .add_hand(card)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
-
-    target_ctx.save()?;
+    // If source save fails, attempt rollback
+    if let Err(e) = source_ctx.save() {
+        // Attempt to rollback: remove from target
+        let _ = target_ctx.inner.deck.remove_hand(&entry_name);
+        let _ = target_ctx.save();
+        return Err(e).context("Failed to save source deck after move");
+    }
 
     println!(
         "✓ Entry '{}' moved from '{}' to '{}'",
@@ -299,7 +308,7 @@ fn handle_passwd(
         .deck
         .list_hands()
         .iter()
-        .map(|e| e.name.clone())
+        .map(|e| e.name().to_string())
         .collect();
 
     let config = Config::load(config_dir)?;

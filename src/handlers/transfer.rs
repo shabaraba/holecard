@@ -76,7 +76,7 @@ pub fn handle_import(
                 }
             }
             Err(_) => {
-                println!("  Skipped '{}' (already exists)", entry.name);
+                println!("  Skipped '{}' (already exists)", entry.name());
                 skipped += 1;
             }
         }
