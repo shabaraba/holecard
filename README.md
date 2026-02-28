@@ -1,10 +1,12 @@
-# Holecard
+<div align="center">
+  <img src="assets/logo.png" alt="Holecard Logo" width="600">
 
-[![Crates.io](https://img.shields.io/crates/v/holecard-cli.svg)](https://crates.io/crates/holecard-cli)
-[![License](https://img.shields.io/crates/l/holecard-cli.svg)](https://github.com/shabarba/holecard#license)
-[![CI](https://github.com/shabarba/holecard/actions/workflows/ci.yml/badge.svg)](https://github.com/shabarba/holecard/actions)
+  [![Crates.io](https://img.shields.io/crates/v/holecard-cli.svg)](https://crates.io/crates/holecard-cli)
+  [![License](https://img.shields.io/crates/l/holecard-cli.svg)](https://github.com/shabarba/holecard#license)
+  [![CI](https://github.com/shabarba/holecard/actions/workflows/ci.yml/badge.svg)](https://github.com/shabarba/holecard/actions)
 
-A secure CLI password manager with dual-key encryption, TOTP support, and SSH key management.
+  A secure CLI password manager with dual-key encryption, TOTP support, and SSH key management.
+</div>
 
 ## Features
 
