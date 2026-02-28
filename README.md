@@ -22,17 +22,17 @@ A secure CLI password manager with dual-key encryption, TOTP support, and SSH ke
 # Install from crates.io
 cargo install holecard-cli
 
-# Initialize hand
+# Initialize deck
 hc init
 
-# Add a card
-hc card add github -f username=myuser -f password=mypass
+# Add a hand
+hc hand add github -f username=myuser -f password=mypass
 
-# Get a card
-hc card get github
+# Get a hand
+hc hand get github
 
 # Copy password to clipboard (auto-clears after 30s)
-hc card get github -c
+hc hand get github -c
 ```
 
 ## Installation
@@ -77,30 +77,30 @@ cargo binstall holecard-cli
 
 ## Basic Usage
 
-### Managing Passwords
+### Managing Hands (Password Entries)
 
 ```bash
-# Add card with custom fields
-hc card add aws -f access_key=AKIA... -f secret_key=...
+# Add hand with cards (key-value fields)
+hc hand add aws -f access_key=AKIA... -f secret_key=...
 
-# Add card interactively
-hc card add
+# Add hand interactively
+hc hand add
 
-# List all cards
-hc card list
+# List all hands
+hc hand list
 
-# Get card details
-hc card get github
+# Get hand details
+hc hand get github
 
-# Copy specific field to clipboard
-hc card get github -c password
-hc card get github -c username
+# Copy specific card to clipboard
+hc hand get github -c password
+hc hand get github -c username
 
-# Edit card
-hc card edit github -f password=newpass
+# Edit hand
+hc hand edit github -f password=newpass
 
-# Remove card
-hc card rm github
+# Remove hand
+hc hand rm github
 ```
 
 ### TOTP (Two-Factor Authentication)
@@ -121,10 +121,11 @@ hc totp rm github
 
 ```bash
 # Add SSH key from file
-hc card add my-server \
-  --file private_key=~/.ssh/id_rsa \
-  -f alias="user@server.com" \
-  -f passphrase="optional"
+hc ssh add my-server \
+  --private-key ~/.ssh/id_rsa \
+  --username user \
+  --hostname server.com \
+  --passphrase "optional"
 
 # Connect via SSH (auto-loads key)
 hc ssh connect user@server.com
@@ -146,7 +147,7 @@ hc ssh unload my-server
 # Check session status
 hc status
 
-# Lock hand (clear cached session)
+# Lock deck (clear cached session)
 hc lock
 
 # Configure session timeout (minutes)
@@ -177,7 +178,7 @@ hc inject -i config.yaml -o config.prod.yaml
 cat config.yaml | hc inject -i - > config.prod.yaml
 ```
 
-**URI Format**: `hc://[hand/]card/field` or `op://[hand/]card/field`
+**URI Format**: `hc://[deck/]hand/card` or `op://[deck/]hand/card`
 
 ### Environment Variables with URIs
 
@@ -191,38 +192,19 @@ hc run \
   -- python app.py
 
 # Supports environment variable substitution
-export HAND=production
-hc run --env DB_PASS=hc://${HAND}/db/password -- ./deploy.sh
-```
-
-### Legacy Template Injection
-
-Render templates with card fields:
-
-```bash
-hc inject github "https://{{username}}:{{password}}@github.com"
-hc inject aws "AWS_ACCESS_KEY={{access_key}}"
-```
-
-### Legacy Environment Variables
-
-Run commands with card-based environment variables:
-
-```bash
-# Card fields become uppercase env vars
-hc run aws -- env | grep -E "^(ACCESS_KEY|SECRET_KEY)"
-hc run database -- psql -h localhost -U $USERNAME -d mydb
+export DECK=production
+hc run --env DB_PASS=hc://${DECK}/db/password -- ./deploy.sh
 ```
 
 ### Import/Export
 
 ```bash
-# Export hand to encrypted JSON
+# Export deck to encrypted JSON
 hc export backup.json
 
 # Import from encrypted JSON
 hc import backup.json
-hc import backup.json --overwrite  # Replace existing cards
+hc import backup.json --overwrite  # Replace existing hands
 ```
 
 ### Biometric Authentication (macOS)
@@ -242,7 +224,7 @@ hc config enable-biometric true
 
 - [Security Guide](docs/SECURITY.md) - Encryption details and security model
 - [SSH Key Management](docs/SSH.md) - Comprehensive SSH integration guide
-- [Multi-Hand Support](docs/MULTI_VAULT.md) - Managing multiple hands
+- [Multi-Deck Support](docs/MULTI_VAULT.md) - Managing multiple decks
 - [Distribution Guide](DISTRIBUTION.md) - Release and distribution process
 
 ## Security
@@ -259,13 +241,13 @@ The derived encryption key is cached in the system keyring to avoid repeated pas
 
 ### Backup and Recovery
 
-Use `hc export` to backup your hand:
+Use `hc export` to backup your deck:
 
 ```bash
 hc export backup.json  # Encrypted with a password you choose
 ```
 
-**Important**: Store export files securely. You need BOTH the export file and its password to restore your hand.
+**Important**: Store export files securely. You need BOTH the export file and its password to restore your deck.
 
 ## Building from Source
 

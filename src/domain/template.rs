@@ -5,9 +5,9 @@ use regex::Regex;
 pub struct TemplateEngine;
 
 impl TemplateEngine {
-    /// Render a template string with card data
+    /// Render a template string with hand data
     /// Supports:
-    /// - {{card.field}} - specific card from hand
+    /// - {{card.key}} - specific card value from hand
     /// - {{card}} - all cards as KEY=value format
     #[allow(dead_code)]
     pub fn render(template: &str, hand: &Hand) -> Result<String> {
@@ -50,7 +50,7 @@ impl TemplateEngine {
 
         if !missing_fields.is_empty() {
             anyhow::bail!(
-                "Missing fields in card '{}': {}",
+                "Missing cards in hand '{}': {}",
                 hand.name(),
                 missing_fields.join(", ")
             );
@@ -68,21 +68,21 @@ impl TemplateEngine {
             .join("\n")
     }
 
-    /// Resolve a template string that may contain {{hand_name.field}} references
+    /// Resolve a template string that may contain {{hand_name.card}} references
     /// Returns the resolved value or the original string if not a template
     pub fn resolve_value(value: &str, deck: &Deck) -> Result<String> {
         let re = Regex::new(r"^\{\{([^.]+)\.([^}]+)\}\}$").context("Failed to compile regex")?;
 
         if let Some(cap) = re.captures(value) {
             let hand_name = cap[1].trim();
-            let field_name = cap[2].trim();
+            let card_name = cap[2].trim();
 
             let hand = deck
                 .get_hand(hand_name)
                 .with_context(|| format!("Hand '{}' not found in deck", hand_name))?;
 
-            hand.cards.get(field_name).cloned().ok_or_else(|| {
-                anyhow::anyhow!("Field '{}' not found in hand '{}'", field_name, hand_name)
+            hand.cards.get(card_name).cloned().ok_or_else(|| {
+                anyhow::anyhow!("Card '{}' not found in hand '{}'", card_name, hand_name)
             })
         } else {
             Ok(value.to_string())
@@ -135,7 +135,7 @@ mod tests {
         let hand = create_test_hand();
         let result = TemplateEngine::render("{{card.nonexistent}}", &hand);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Missing fields"));
+        assert!(result.unwrap_err().to_string().contains("Missing cards"));
     }
 
     #[test]

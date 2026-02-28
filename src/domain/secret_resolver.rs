@@ -16,30 +16,31 @@ pub struct SecretResolver;
 impl SecretResolver {
     pub fn resolve(
         uri_str: &str,
-        default_hand: Option<&str>,
+        default_deck: Option<&str>,
         keyring: &KeyringManager,
         config_dir: &Path,
     ) -> Result<String> {
         let expanded = SecretUri::expand_env_vars(uri_str);
         let uri = SecretUri::parse(&expanded)?;
 
-        let hand_name = uri.hand.as_deref().or(default_hand);
-        let ctx = MultiDeckContext::load(hand_name, keyring, config_dir)?;
+        let deck_name = uri.deck.as_deref().or(default_deck);
+        let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-        let card = ctx
+        let hand = ctx
             .inner
             .deck
-            .get_hand(&uri.item)
+            .get_hand(&uri.hand)
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-        card.cards.get(&uri.field).cloned().ok_or_else(|| {
-            anyhow::anyhow!("Field '{}' not found in card '{}'", uri.field, uri.item)
-        })
+        hand.cards
+            .get(&uri.card)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Card '{}' not found in hand '{}'", uri.card, uri.hand))
     }
 
     pub fn resolve_template(
         template: &str,
-        default_hand: Option<&str>,
+        default_deck: Option<&str>,
         keyring: &KeyringManager,
         config_dir: &Path,
     ) -> Result<String> {
@@ -50,7 +51,7 @@ impl SecretResolver {
             let full_match = cap.get(0).unwrap();
             let uri_str = full_match.as_str().trim();
 
-            match Self::resolve(uri_str, default_hand, keyring, config_dir) {
+            match Self::resolve(uri_str, default_deck, keyring, config_dir) {
                 Ok(value) => {
                     replacements.push((full_match.range(), value));
                 }

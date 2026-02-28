@@ -27,11 +27,11 @@ pub fn prompt_master_password_confirm() -> Result<String> {
     Ok(password)
 }
 
-pub fn prompt_card_name() -> Result<String> {
+pub fn prompt_hand_name() -> Result<String> {
     Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Card name")
+        .with_prompt("Hand name")
         .interact_text()
-        .context("Failed to read card name")
+        .context("Failed to read hand name")
 }
 
 pub fn prompt_cards() -> Result<HashMap<String, String>> {
@@ -79,7 +79,7 @@ pub fn prompt_notes() -> Result<Option<String>> {
 #[allow(dead_code)]
 pub fn prompt_confirm_reinit() -> Result<bool> {
     Confirm::with_theme(&ColorfulTheme::default())
-        .with_prompt("⚠ Hand already exists. Reinitialize? This will DELETE ALL existing data!")
+        .with_prompt("⚠ Deck already exists. Reinitialize? This will DELETE ALL existing data!")
         .default(false)
         .interact()
         .context("Failed to read confirmation")
@@ -107,20 +107,20 @@ pub fn prompt_import_password() -> Result<String> {
 }
 
 pub enum EditAction {
-    EditField(String),
-    AddField,
-    DeleteField(String),
+    EditCard(String),
+    AddCard,
+    DeleteCard(String),
     EditNotes,
     Done,
 }
 
 pub fn prompt_edit_menu(hand: &Hand) -> Result<EditAction> {
     let mut options = vec!["Add new card", "Edit notes", "Done"];
-    let mut field_keys: Vec<String> = hand.cards.keys().cloned().collect();
-    field_keys.sort();
+    let mut card_keys: Vec<String> = hand.cards.keys().cloned().collect();
+    card_keys.sort();
 
-    if !field_keys.is_empty() {
-        println!("\nCurrent cards: {}", field_keys.join(", "));
+    if !card_keys.is_empty() {
+        println!("\nCurrent cards: {}", card_keys.join(", "));
         options.insert(0, "Edit existing card");
         options.insert(1, "Delete card");
     }
@@ -132,32 +132,32 @@ pub fn prompt_edit_menu(hand: &Hand) -> Result<EditAction> {
         .interact()
         .context("Failed to read menu selection")?;
 
-    let offset = if field_keys.is_empty() { 0 } else { 2 };
+    let offset = if card_keys.is_empty() { 0 } else { 2 };
 
     match selection {
-        0 if !field_keys.is_empty() => {
-            let field_selection = Select::with_theme(&ColorfulTheme::default())
-                .with_prompt("Select field to edit")
-                .items(&field_keys)
+        0 if !card_keys.is_empty() => {
+            let card_selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select card to edit")
+                .items(&card_keys)
                 .interact()
-                .context("Failed to read field selection")?;
-            Ok(EditAction::EditField(field_keys[field_selection].clone()))
+                .context("Failed to read card selection")?;
+            Ok(EditAction::EditCard(card_keys[card_selection].clone()))
         }
-        1 if !field_keys.is_empty() => {
-            let field_selection = Select::with_theme(&ColorfulTheme::default())
-                .with_prompt("Select field to delete")
-                .items(&field_keys)
+        1 if !card_keys.is_empty() => {
+            let card_selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select card to delete")
+                .items(&card_keys)
                 .interact()
-                .context("Failed to read field selection")?;
-            Ok(EditAction::DeleteField(field_keys[field_selection].clone()))
+                .context("Failed to read card selection")?;
+            Ok(EditAction::DeleteCard(card_keys[card_selection].clone()))
         }
-        n if n == offset => Ok(EditAction::AddField),
+        n if n == offset => Ok(EditAction::AddCard),
         n if n == offset + 1 => Ok(EditAction::EditNotes),
         _ => Ok(EditAction::Done),
     }
 }
 
-pub fn prompt_field_value(key: &str) -> Result<String> {
+pub fn prompt_card_value(key: &str) -> Result<String> {
     if key == "private_key" {
         let value = Editor::new()
             .edit("# Paste your SSH private key here (including BEGIN/END lines)\n# Lines starting with # will be removed")
@@ -176,21 +176,21 @@ pub fn prompt_field_value(key: &str) -> Result<String> {
             .with_prompt(format!("New value for '{}'", key))
             .allow_empty_password(true)
             .interact()
-            .context("Failed to read field value")
+            .context("Failed to read card value")
     }
 }
 
-pub fn prompt_new_field() -> Result<(String, String)> {
+pub fn prompt_new_card() -> Result<(String, String)> {
     let key: String = Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Field name")
+        .with_prompt("Card name")
         .interact_text()
-        .context("Failed to read field name")?;
+        .context("Failed to read card name")?;
 
     let value: String = Password::with_theme(&ColorfulTheme::default())
         .with_prompt(format!("{} value", key))
         .allow_empty_password(true)
         .interact()
-        .context("Failed to read field value")?;
+        .context("Failed to read card value")?;
 
     Ok((key, value))
 }

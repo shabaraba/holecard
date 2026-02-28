@@ -111,7 +111,7 @@ fix(crypto): correct nonce generation for export
 
 docs(readme): update installation instructions
 
-test(deck): add test cases for card CRUD operations
+test(deck): add test cases for hand CRUD operations
 ```
 
 ### Development Tips
@@ -245,9 +245,9 @@ fn test_deck_lifecycle() {
     let temp_dir = tempfile::tempdir().unwrap();
     let deck_path = temp_dir.path().join("vault.enc");
 
-    // Initialize hand
-    // Add card
-    // Get card
+    // Initialize deck
+    // Add hand
+    // Get hand
     // Verify
 }
 ```
@@ -370,15 +370,15 @@ Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md):
 
 ## Steps to Reproduce
 1. `hc init`
-2. `hc add test -f password=test`
+2. `hc hand add test -f password=test`
 3. Reboot system
-4. `hc get test` → Error
+4. `hc hand get test` → Error
 
 ## Expected Behavior
-Card should be retrieved successfully
+Hand should be retrieved successfully
 
 ## Actual Behavior
-Error: Failed to decrypt hand: decryption failed
+Error: Failed to decrypt deck: decryption failed
 ```
 
 ### Feature Requests
@@ -422,7 +422,7 @@ holecard/
 - `src/infrastructure/crypto_impl.rs` - Encryption implementation
 - `src/infrastructure/storage.rs` - Deck file I/O
 - `src/domain/deck.rs` - Deck data structure
-- `src/handlers/deck.rs` - Deck command handlers
+- `src/handlers/deck.rs` - Hand command handlers
 
 ### Useful Commands
 

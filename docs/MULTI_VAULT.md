@@ -1,176 +1,173 @@
-# Multi-Hand Support Guide
+# Multi-Deck Support Guide
 
-This guide covers how to use Holecard's multi-hand feature to manage multiple encrypted hands (e.g., personal, work, family).
+This guide covers how to use Holecard's multi-deck feature to manage multiple encrypted decks (e.g., personal, work, family).
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
-- [Hand Management](#hand-management)
-- [Working with Multiple Hands](#working-with-multiple-vaults)
+- [Deck Management](#deck-management)
+- [Working with Multiple Decks](#working-with-multiple-decks)
 - [Use Cases](#use-cases)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-Multi-hand support allows you to:
+Multi-deck support allows you to:
 
 - **Separate concerns**: Personal vs. work vs. family passwords
-- **Different security levels**: High-security vs. convenience vaults
-- **Team collaboration**: Shared vaults with team members
+- **Different security levels**: High-security vs. convenience decks
+- **Team collaboration**: Shared decks with team members
 - **Compliance**: Isolate sensitive data per regulatory requirements
 
-Each hand has:
+Each deck has:
 - Independent master password
-- Separate secret key (in system keyring)
-- Isolated cards and configuration
+- Shared secret key (in system keyring)
+- Isolated hands and configuration
 - Independent session management
 
 ## Quick Start
 
 ```bash
-# Create personal hand (default)
+# Create default deck
 hc init
 
-# Create work hand
-hc hand add work ~/.holecard/work.enc
-hc hand init work
+# Create work deck
+hc deck create work
 
-# Switch to work hand
-hc hand switch work
+# Switch to work deck
+hc deck use work
 
-# Add card to work hand
-hc add jira -f username=user -f password=pass
+# Add hand to work deck
+hc hand add jira -f username=user -f password=pass
 
-# Switch back to personal hand
-hc hand switch default
+# Switch back to default deck
+hc deck use default
 
-# List all hands
-hc hand list
+# List all decks
+hc deck list
 ```
 
-## Hand Management
+## Deck Management
 
-### Creating Hands
+### Creating Decks
 
 ```bash
-# Add new hand
-hc hand add <name> <path>
+# Create new deck
+hc deck create <name>
 
 # Examples:
-hc hand add work ~/.holecard/work.enc
-hc hand add family ~/Dropbox/family-hand.enc
-hc hand add shared /mnt/shared/team-hand.enc
+hc deck create work
+hc deck create family
+hc deck create project-alpha
 ```
 
-### Initializing Hands
+### Switching Decks
 
 ```bash
-# Initialize hand (set master password)
-hc hand init <name>
-
-# Example:
-hc hand init work
-# Prompts for master password for work hand
-```
-
-### Switching Hands
-
-```bash
-# Switch active hand
-hc hand switch <name>
+# Switch active deck
+hc deck use <name>
 
 # Examples:
-hc hand switch work
-hc hand switch default
+hc deck use work
+hc deck use default
 
-# Verify current hand
+# Verify current deck
 hc status
 ```
 
-### Listing Hands
+### Listing Decks
 
 ```bash
-# List all configured hands
-hc hand list
+# List all configured decks
+hc deck list
 
 # Example output:
-# Vaults:
-# * default - ~/.holecard/hand.enc (active)
-#   work - ~/.holecard/work.enc
-#   family - ~/Dropbox/family-hand.enc
+# Decks:
+#   • default (active)
+#     Path: ~/.holecard/default.enc
+#     Last accessed: 2024-01-15 10:30:00
+#   • work
+#     Path: ~/.holecard/work.enc
+#     Last accessed: 2024-01-14 18:45:00
 ```
 
-### Removing Hands
+### Deleting Decks
 
 ```bash
-# Remove hand from registry (doesn't delete file)
-hc hand rm <name>
+# Delete deck (with confirmation)
+hc deck delete <name>
+
+# Force delete (skip confirmation)
+hc deck delete <name> --force
+```
+
+### Moving Hands Between Decks
+
+```bash
+# Move a hand from active deck to another deck
+hc deck move <hand-name> <target-deck>
 
 # Example:
-hc hand rm old-work
+hc deck move github work
+
+# Copy a hand (keep in both decks)
+hc deck copy <hand-name> <target-deck>
 ```
 
-**Note**: This only removes the hand from Holecard's registry. The encrypted hand file remains on disk.
-
-### Changing Active Hand Password
+### Changing Master Password
 
 ```bash
-# Switch to target hand
-hc hand switch work
+# Change password for active deck
+hc deck passwd
 
-# Change password
-hc change-password
+# Or switch to target deck first
+hc deck use work
+hc deck passwd
 ```
 
-## Working with Multiple Hands
+## Working with Multiple Decks
 
-### Hand Context
+### Deck Context
 
-All commands operate on the **active hand**:
+All hand commands operate on the **active deck**:
 
 ```bash
-# Current hand context
+# Check active deck
 hc status
 
-# Add to current hand
-hc add card1 -f key=value
+# Add hand to current deck
+hc hand add card1 -f key=value
 
-# Switch hand
-hc hand switch work
+# Switch deck
+hc deck use work
 
-# Add to work hand
-hc add card2 -f key=value
+# Add hand to work deck
+hc hand add card2 -f key=value
 ```
 
-### Cross-Hand Operations
+### Using --deck Flag
 
-Currently, Holecard doesn't support cross-hand operations. To move cards between hands:
+You can specify a deck for a single command without switching:
 
 ```bash
-# Export from source hand
-hc hand switch personal
-hc export ~/temp-export.json
+# Read from specific deck
+hc --deck work hand get github
 
-# Import to destination hand
-hc hand switch work
-hc import ~/temp-export.json
-
-# Clean up
-rm ~/temp-export.json
+# Export specific deck
+hc --deck work export backup.json
 ```
 
 ### Session Management
 
-Each hand has an independent session:
+Each deck has an independent session:
 
 ```bash
-# Lock current hand
+# Lock current deck
 hc lock
 
-# Lock all hands
-hc hand switch default && hc lock
-hc hand switch work && hc lock
+# Check status
+hc status
 ```
 
 ## Use Cases
@@ -179,18 +176,17 @@ hc hand switch work && hc lock
 
 ```bash
 # Setup
-hc hand add work ~/.holecard/work.enc
-hc hand init work
+hc deck create work
 
-# Personal passwords
-hc hand switch default
-hc add gmail -f username=personal@gmail.com -f password=...
-hc add bank -f username=... -f password=...
+# Personal passwords (default deck)
+hc deck use default
+hc hand add gmail -f username=personal@gmail.com -f password=...
+hc hand add bank -f username=... -f password=...
 
 # Work passwords
-hc hand switch work
-hc add jira -f username=work@company.com -f password=...
-hc add aws -f access_key=... -f secret_key=...
+hc deck use work
+hc hand add jira -f username=work@company.com -f password=...
+hc hand add aws -f access_key=... -f secret_key=...
 ```
 
 **Benefits:**
@@ -198,253 +194,111 @@ hc add aws -f access_key=... -f secret_key=...
 - Different master passwords for different threat models
 - Selective backup/sharing strategies
 
-### Family Hand
+### Family Deck
 
 ```bash
-# Create shared family hand
-hc hand add family ~/Dropbox/family-hand.enc
-hc hand init family
+# Create family deck
+hc deck create family
 
 # Add family credentials
-hc hand switch family
-hc add netflix -f email=family@example.com -f password=...
-hc add wifi -f ssid=HomeWiFi -f password=...
-hc add router -f admin_user=admin -f admin_pass=...
+hc deck use family
+hc hand add netflix -f email=family@example.com -f password=...
+hc hand add wifi -f ssid=HomeWiFi -f password=...
+hc hand add router -f admin_user=admin -f admin_pass=...
 ```
 
 **Sharing:**
-- Export hand: `hc export ~/family-backup.json`
+- Export deck: `hc export ~/family-backup.json`
 - Share encrypted export file with family members
 - Each member imports: `hc import ~/family-backup.json`
 
 ### Security Levels
 
 ```bash
-# High-security hand (sensitive data)
-hc hand add high-sec ~/.holecard/high-security.enc
-hc hand init high-sec
+# High-security deck (sensitive data)
+hc deck create high-sec
+hc deck use high-sec
 hc config session-timeout 5  # Short timeout
 
-# Convenience hand (low-risk data)
-hc hand add convenience ~/.holecard/convenience.enc
-hc hand init convenience
+# Convenience deck (low-risk data)
+hc deck create convenience
+hc deck use convenience
 hc config session-timeout 120  # Long timeout
-```
-
-### Team/Project Hands
-
-```bash
-# Project-specific hand
-hc hand add project-alpha ~/work/alpha-secrets.enc
-hc hand init project-alpha
-
-hc hand switch project-alpha
-hc add staging -f db_host=... -f db_pass=...
-hc add prod -f db_host=... -f db_pass=...
 ```
 
 ## Best Practices
 
 ### Naming Conventions
 
-Use descriptive hand names:
+Use descriptive deck names:
 
-✅ Good:
+Good:
 - `personal`
 - `work-acme-corp`
 - `family-shared`
 - `project-alpha`
 - `high-security`
 
-❌ Bad:
-- `hand1`
+Bad:
+- `deck1`
 - `temp`
 - `asdf`
 
-### File Organization
-
-Organize hand files logically:
-
-```
-~/.holecard/
-├── hand.enc           # Default personal hand
-├── work.enc           # Work hand
-└── config.toml        # Holecard config
-
-~/Dropbox/
-└── family-hand.enc   # Shared family hand
-
-~/work/
-└── project-secrets.enc  # Work project hand
-```
-
 ### Backup Strategy
 
-Different backup strategies per hand:
+Different backup strategies per deck:
 
 ```bash
-# Personal hand - local backup
-hc hand switch personal
+# Personal deck - local backup
+hc deck use default
 hc export ~/Backups/personal-$(date +%Y%m%d).json
 
-# Work hand - no backup (company policy)
-# (or encrypted cloud backup)
+# Work deck - per company policy
+hc deck use work
+hc export ~/Backups/work-$(date +%Y%m%d).json
 
-# Family hand - cloud backup
-hc hand switch family
+# Family deck - cloud backup
+hc deck use family
 hc export ~/Dropbox/Backups/family-$(date +%Y%m%d).json
-```
-
-### Security Configuration
-
-Adjust security per hand:
-
-```bash
-# High-security hand
-hc hand switch high-sec
-hc config session-timeout 5
-hc config enable-biometric false  # Require password
-
-# Convenience hand
-hc hand switch convenience
-hc config session-timeout 120
-hc config enable-biometric true   # Enable Touch ID
-```
-
-### Hand Registry
-
-The hand registry is stored in:
-```
-~/.holecard/vault_registry.json
-```
-
-This file maps hand names to file paths. Back it up:
-
-```bash
-cp ~/.holecard/vault_registry.json ~/Backups/
 ```
 
 ### Master Password Management
 
-**Different passwords per hand:**
-- Use unique master passwords for each hand
-- Higher security for sensitive vaults
-- Consider password manager for master passwords (ironic but practical)
+**Different passwords per deck:**
+- Use unique master passwords for each deck
+- Higher security for sensitive decks
+- Consider password manager for master passwords
 
 **Same password considerations:**
 - Easier to remember
 - Single point of failure
 - Not recommended for high-security use cases
 
-## Advanced Usage
-
-### Default Hand
-
-The `default` hand is created during initial `hc init`:
-
-```bash
-# List vaults (shows default)
-hc hand list
-
-# Default hand location
-~/.holecard/hand.enc
-```
-
-To change default hand location:
-
-```bash
-hc config deck-path ~/new-location.enc
-```
-
-### Switching Hands in Scripts
-
-```bash
-#!/bin/bash
-# Deploy script using work hand
-
-# Switch to work hand
-hc hand switch work
-
-# Use secrets
-AWS_KEY=$(hc read hc://work/aws/access_key)
-AWS_SECRET=$(hc read hc://work/aws/secret_key)
-
-# Deploy
-aws s3 sync ./dist s3://bucket --region us-east-1
-```
-
-### Temporary Hands
-
-For one-off projects:
-
-```bash
-# Create temporary hand
-hc hand add temp-project /tmp/temp-hand.enc
-hc hand init temp-project
-
-# Use it
-hc hand switch temp-project
-# ... add cards ...
-
-# When done
-hc hand switch default
-hc hand rm temp-project
-rm /tmp/temp-hand.enc
-```
-
 ## Troubleshooting
 
-### "Hand not found"
+### "Deck not found"
 
-Hand name not in registry:
+Deck name not in registry:
 
 ```bash
-# Check registered hands
-hc hand list
-
-# Add hand if missing
-hc hand add work ~/.holecard/work.enc
+# Check registered decks
+hc deck list
 ```
 
-### "Failed to initialize hand"
-
-Hand file already exists:
+### Wrong Deck Active
 
 ```bash
-# Use existing hand (don't reinitialize)
-hc hand switch work
-
-# Or delete and recreate
-rm ~/.holecard/work.enc
-hc hand init work
-```
-
-### Wrong Hand Active
-
-```bash
-# Check current hand
+# Check current deck
 hc status
 
-# Switch to correct hand
-hc hand switch <correct-name>
-```
-
-### Session Confusion
-
-Each hand has independent session:
-
-```bash
-# Lock all hands
-for hand_item in $(hc hand list | awk '{print $2}'); do
-  hc hand switch $hand_item
-  hc lock
-done
+# Switch to correct deck
+hc deck use <correct-name>
 ```
 
 ## Related Documentation
 
 - [Security Guide](SECURITY.md) - Encryption and security model
-- [SSH Key Management](SSH.md) - Managing SSH keys across hands
+- [SSH Key Management](SSH.md) - Managing SSH keys across decks
 
 ## License
 

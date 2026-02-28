@@ -38,9 +38,9 @@ pub enum ProviderError {
     #[error("Provider configuration error: {0}")]
     ConfigError(String),
 
-    #[error("Card '{0}' not found in hand")]
+    #[error("Hand '{0}' not found in deck")]
     CardNotFound(String),
 
-    #[error("Invalid card name format: {0}")]
+    #[error("Invalid hand name format: {0}")]
     InvalidCardFormat(String),
 }

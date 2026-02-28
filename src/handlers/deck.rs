@@ -10,11 +10,11 @@ use crate::multi_deck_context::MultiDeckContext;
 
 pub fn handle_init(keyring: &KeyringManager, config_dir: &Path) -> Result<()> {
     println!("⚠️  'hc init' is deprecated.");
-    println!("    Use 'hc hand create default' instead.\n");
-    println!("Proceeding with hand creation...\n");
+    println!("    Use 'hc deck create default' instead.\n");
+    println!("Proceeding with deck creation...\n");
 
     crate::handlers::deck_management::handle_deck(
-        crate::cli::commands::HandCommands::Create {
+        crate::cli::commands::DeckCommands::Create {
             name: "default".to_string(),
         },
         None,
@@ -42,7 +42,7 @@ pub fn handle_add(
 ) -> Result<()> {
     let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let card_name = name.unwrap_or_else(|| input::prompt_card_name().unwrap());
+    let card_name = name.unwrap_or_else(|| input::prompt_hand_name().unwrap());
 
     let mut custom_fields: HashMap<String, String> = if fields.is_empty() && file_fields.is_empty()
     {
@@ -79,7 +79,7 @@ pub fn handle_add(
 
     ctx.save()?;
 
-    println!("Card '{}' added successfully!", card_name);
+    println!("Hand '{}' added successfully!", card_name);
     Ok(())
 }
 
@@ -105,12 +105,12 @@ pub fn handle_get(
         .get_hand(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    println!("\nCard: {}", card.name());
+    println!("\nHand: {}", card.name());
     println!("Created: {}", card.created_at.format("%Y-%m-%d %H:%M:%S"));
     println!("Updated: {}", card.updated_at.format("%Y-%m-%d %H:%M:%S"));
 
     if !card.cards.is_empty() {
-        println!("\nFields:");
+        println!("\nCards:");
         if show {
             for (key, value) in &card.cards {
                 println!("  {}: {}", key, value);
@@ -123,7 +123,7 @@ pub fn handle_get(
     }
 
     if totp && name == "totp" {
-        println!("\n⚠ Use 'hc totp get <service>' to generate TOTP codes");
+        println!("\n⚠ Use 'hc totp get <name>' to generate TOTP codes");
     }
 
     if let Some(notes) = &card.notes {
@@ -134,12 +134,12 @@ pub fn handle_get(
         }
     }
 
-    if let Some(field_name) = clip {
-        let value_to_copy = match field_name {
-            Some(field) => card
+    if let Some(card_name) = clip {
+        let value_to_copy = match card_name {
+            Some(card_key) => card
                 .cards
-                .get(&field)
-                .context(format!("Field '{}' not found", field))?
+                .get(&card_key)
+                .context(format!("Card '{}' not found", card_key))?
                 .clone(),
             None => {
                 if let Some(password) = card.cards.get("password") {
@@ -148,7 +148,7 @@ pub fn handle_get(
                     card.cards
                         .values()
                         .next()
-                        .context("No fields to copy")?
+                        .context("No cards to copy")?
                         .clone()
                 }
             }
@@ -170,16 +170,16 @@ pub fn handle_list(
     let hands = ctx.inner.deck.list_hands();
 
     if hands.is_empty() {
-        println!("No cards found.");
+        println!("No hands found.");
         return Ok(());
     }
 
-    println!("\nCards:");
+    println!("\nHands:");
     for hand in hands {
         println!("  • {}", hand.name());
         if !hand.cards.is_empty() {
             println!(
-                "    Fields: {}",
+                "    Cards: {}",
                 hand.cards
                     .keys()
                     .map(|k| k.as_str())
@@ -204,7 +204,7 @@ pub fn handle_edit(
     let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     // Require Touch ID for edit operations
-    require_biometric_auth(&ctx.inner.config, "Modify card")?;
+    require_biometric_auth(&ctx.inner.config, "Modify hand")?;
 
     let card = ctx
         .inner
@@ -215,28 +215,28 @@ pub fn handle_edit(
     if !fields.is_empty() || !file_fields.is_empty() || !rm_fields.is_empty() {
         for (key, value) in fields {
             card.cards.insert(key.clone(), value);
-            println!("✓ Field '{}' updated", key);
+            println!("✓ Card '{}' updated", key);
         }
 
         for (key, value) in file_fields {
             card.cards.insert(key.clone(), value);
-            println!("✓ Field '{}' updated from file", key);
+            println!("✓ Card '{}' updated from file", key);
         }
 
         for key in rm_fields {
             if card.cards.remove(&key).is_some() {
-                println!("✓ Field '{}' removed", key);
+                println!("✓ Card '{}' removed", key);
             } else {
-                println!("⚠ Field '{}' not found", key);
+                println!("⚠ Card '{}' not found", key);
             }
         }
 
         card.touch();
         ctx.save()?;
-        println!("✓ Card '{}' updated successfully!", name);
+        println!("✓ Hand '{}' updated successfully!", name);
     } else {
         println!(
-            "⚠ No changes specified. Use -f to add/update fields, --file to add from file, or --rm-field to remove fields."
+            "⚠ No changes specified. Use -f to add/update cards, --file to add from file, or --rm-card to remove cards."
         );
     }
 
@@ -256,26 +256,26 @@ pub fn handle_edit_interactive(
         .deck
         .get_hand_mut(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
-    println!("Editing card: {}", card.name());
+    println!("Editing hand: {}", card.name());
 
     loop {
         match input::prompt_edit_menu(card)? {
             input::EditAction::Done => break,
-            input::EditAction::EditField(key) => {
-                let value = input::prompt_field_value(&key)?;
+            input::EditAction::EditCard(key) => {
+                let value = input::prompt_card_value(&key)?;
                 card.cards.insert(key.clone(), value);
-                println!("✓ Field '{}' updated", key);
+                println!("✓ Card '{}' updated", key);
             }
-            input::EditAction::AddField => {
-                let (key, value) = input::prompt_new_field()?;
+            input::EditAction::AddCard => {
+                let (key, value) = input::prompt_new_card()?;
                 card.cards.insert(key.clone(), value);
-                println!("✓ Field '{}' added", key);
+                println!("✓ Card '{}' added", key);
             }
-            input::EditAction::DeleteField(key) => {
+            input::EditAction::DeleteCard(key) => {
                 if card.cards.remove(&key).is_some() {
-                    println!("✓ Field '{}' removed", key);
+                    println!("✓ Card '{}' removed", key);
                 } else {
-                    println!("⚠ Field '{}' not found", key);
+                    println!("⚠ Card '{}' not found", key);
                 }
             }
             input::EditAction::EditNotes => {
@@ -289,7 +289,7 @@ pub fn handle_edit_interactive(
     card.touch();
     ctx.save()?;
 
-    println!("✓ Card '{}' updated successfully!", name);
+    println!("✓ Hand '{}' updated successfully!", name);
     Ok(())
 }
 
@@ -302,7 +302,7 @@ pub fn handle_rm(
     let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
     // Require Touch ID for remove operations
-    require_biometric_auth(&ctx.inner.config, "Delete card")?;
+    require_biometric_auth(&ctx.inner.config, "Delete hand")?;
 
     ctx.inner
         .deck
@@ -311,6 +311,6 @@ pub fn handle_rm(
 
     ctx.save()?;
 
-    println!("✓ Card '{}' removed successfully!", name);
+    println!("✓ Hand '{}' removed successfully!", name);
     Ok(())
 }

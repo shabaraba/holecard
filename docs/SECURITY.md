@@ -21,8 +21,8 @@ Holecard uses a dual-key encryption system that combines:
 
 Both keys are required to derive the encryption key. This provides defense-in-depth:
 
-- Compromising the system keyring alone doesn't expose your hand
-- Keyloggers capturing your master password alone can't decrypt your hand
+- Compromising the system keyring alone doesn't expose your deck
+- Keyloggers capturing your master password alone can't decrypt your deck
 - Both keys must be compromised simultaneously to access your data
 
 ### Key Derivation
@@ -97,7 +97,7 @@ On macOS, biometric authentication is implemented using the `security-framework`
 2. **Subsequent unlocks**:
    - System prompts for Touch ID/Face ID/Apple Watch
    - On success, master password retrieved from Keychain
-   - Combined with secret key for hand decryption
+   - Combined with secret key for deck decryption
 
 **Supported Methods:**
 - Touch ID (MacBook Pro/Air, Magic Keyboard)
@@ -134,11 +134,11 @@ AES-GCM provides authenticated encryption:
 
 ### What Holecard Protects Against
 
-✅ **Deck file theft**: Without master password + secret key, hand is encrypted with AES-256
-✅ **Keyloggers**: Master password alone cannot decrypt hand
-✅ **System compromise**: Secret key alone cannot decrypt hand
+✅ **Deck file theft**: Without master password + secret key, deck is encrypted with AES-256
+✅ **Keyloggers**: Master password alone cannot decrypt deck
+✅ **System compromise**: Secret key alone cannot decrypt deck
 ✅ **Tampering**: AES-GCM detects any modification to encrypted data
-✅ **Rainbow tables**: Argon2id with unique salt per hand
+✅ **Rainbow tables**: Argon2id with unique salt per deck
 ✅ **Brute force**: Argon2id is computationally expensive (19MB memory, 2 iterations)
 
 ### What Holecard Does NOT Protect Against
@@ -146,7 +146,7 @@ AES-GCM provides authenticated encryption:
 ❌ **Malware on your device**: Active malware can intercept passwords in memory
 ❌ **Shoulder surfing**: Attacker observing your screen/keyboard
 ❌ **Compromised system keyring**: If an attacker gains access to your user account
-❌ **Physical device access**: Unlocked session allows hand access
+❌ **Physical device access**: Unlocked session allows deck access
 ❌ **Weak master password**: Short/common passwords reduce security
 ❌ **Rubber-hose cryptanalysis**: Physical coercion to reveal passwords
 
@@ -159,16 +159,16 @@ AES-GCM provides authenticated encryption:
 **Scenario 2: System keyring compromised**
 - Attacker obtains secret key
 - Still needs master password to derive encryption key
-- Cannot decrypt hand with secret key alone
+- Cannot decrypt deck with secret key alone
 
 **Scenario 3: Master password leaked**
 - Attacker obtains master password (keylogger, phishing, etc.)
 - Still needs secret key from system keyring
-- Cannot decrypt hand with master password alone
+- Cannot decrypt deck with master password alone
 
 **Scenario 4: Active session**
 - Attacker gains access to unlocked device
-- Can access hand data through `hc` commands
+- Can access deck data through `hc` commands
 - **Mitigation**: Use `hc lock` when leaving device, configure short session timeout
 
 ## Security Best Practices
@@ -191,7 +191,7 @@ AES-GCM provides authenticated encryption:
 
 ### Session Management
 
-✅ **Lock hand when away**: `hc lock`
+✅ **Lock deck when away**: `hc lock`
 
 ✅ **Configure appropriate timeout**:
 ```bash
@@ -211,7 +211,7 @@ hc config enable-biometric true
 
 ✅ **Regular backups**:
 ```bash
-# Export hand weekly/monthly
+# Export deck weekly/monthly
 hc export ~/Backups/holecard-$(date +%Y%m%d).json
 ```
 
@@ -223,7 +223,7 @@ hc export ~/Backups/holecard-$(date +%Y%m%d).json
 ✅ **Multiple backup locations**:
 - Local: External drive, USB stick
 - Cloud: Encrypted cloud storage (Dropbox, Google Drive with export encryption)
-- Offline: Paper backup of critical cards (air-gapped)
+- Offline: Paper backup of critical hands (air-gapped)
 
 ### System Security
 

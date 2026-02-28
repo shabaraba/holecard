@@ -8,7 +8,7 @@ mod multi_deck_context;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::commands::{CardCommands, Cli, Commands};
+use cli::commands::{Cli, Commands, HandCommands};
 use config::get_config_dir;
 use infrastructure::KeyringManager;
 
@@ -16,12 +16,12 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let config_dir = get_config_dir()?;
     let keyring = KeyringManager::new(config_dir.clone());
-    let deck_name = cli.hand.as_deref();
+    let deck_name = cli.deck.as_deref();
 
     match cli.command {
         Commands::Init => handlers::deck::handle_init(&keyring, &config_dir),
-        Commands::Card { subcommand } => match subcommand {
-            CardCommands::Add {
+        Commands::Hand { subcommand } => match subcommand {
+            HandCommands::Add {
                 name,
                 field,
                 file,
@@ -49,7 +49,7 @@ fn main() -> Result<()> {
                 &keyring,
                 &config_dir,
             ),
-            CardCommands::Get {
+            HandCommands::Get {
                 name,
                 clip,
                 totp,
@@ -63,13 +63,13 @@ fn main() -> Result<()> {
                 &keyring,
                 &config_dir,
             ),
-            CardCommands::List => handlers::deck::handle_list(deck_name, &keyring, &config_dir),
-            CardCommands::Edit {
+            HandCommands::List => handlers::deck::handle_list(deck_name, &keyring, &config_dir),
+            HandCommands::Edit {
                 name,
                 interactive,
                 field,
                 file,
-                rm_field,
+                rm_card,
             } => {
                 if interactive {
                     handlers::deck::handle_edit_interactive(&name, deck_name, &keyring, &config_dir)
@@ -78,14 +78,14 @@ fn main() -> Result<()> {
                         &name,
                         field,
                         file,
-                        rm_field,
+                        rm_card,
                         deck_name,
                         &keyring,
                         &config_dir,
                     )
                 }
             }
-            CardCommands::Remove { name } => {
+            HandCommands::Remove { name } => {
                 handlers::deck::handle_rm(&name, deck_name, &keyring, &config_dir)
             }
         },
@@ -142,15 +142,15 @@ fn main() -> Result<()> {
             no_symbols,
             clip,
         ),
-        Commands::Hand { subcommand } => {
+        Commands::Deck { subcommand } => {
             handlers::deck_management::handle_deck(subcommand, deck_name, &keyring, &config_dir)
         }
         Commands::Ssh { subcommand } => {
             handlers::ssh::handle_ssh(subcommand, deck_name, &keyring, &config_dir)
         }
         Commands::Completion { shell } => handlers::completion::handle_completion(&shell),
-        Commands::__CompleteCards { hand } => {
-            handlers::completion::handle_complete_cards(hand.as_deref(), &config_dir)
+        Commands::__CompleteHands { deck } => {
+            handlers::completion::handle_complete_hands(deck.as_deref(), &config_dir)
         }
     }
 }

@@ -235,7 +235,7 @@ fn handle_secrets_add(
     let provider = create_provider(config)?;
 
     let parts: Vec<&str> = card_field.split('.').collect();
-    let (card_name, field_name) = if parts.len() == 2 {
+    let (hand_name, card_name) = if parts.len() == 2 {
         (parts[0], Some(parts[1]))
     } else if parts.len() == 1 {
         (parts[0], None)
@@ -243,27 +243,27 @@ fn handle_secrets_add(
         return Err(ProviderError::InvalidCardFormat(card_field.to_string()).into());
     };
 
-    let card = ctx
+    let hand = ctx
         .deck
-        .get_hand(card_name)
-        .map_err(|_| ProviderError::CardNotFound(card_name.to_string()))?;
+        .get_hand(hand_name)
+        .map_err(|_| ProviderError::CardNotFound(hand_name.to_string()))?;
 
     if expand {
-        if field_name.is_some() {
+        if card_name.is_some() {
             return Err(ProviderError::ConfigError(
-                "Cannot use --expand with specific field".to_string(),
+                "Cannot use --expand with specific card".to_string(),
             )
             .into());
         }
 
         println!(
-            "About to push {} field(s) to {} / {}:",
-            card.cards.len(),
+            "About to push {} card(s) to {} / {}:",
+            hand.cards.len(),
             provider_type,
             provider_id
         );
-        for (field, value) in &card.cards {
-            let secret_name = card_to_secret_name(field);
+        for (card_key, value) in &hand.cards {
+            let secret_name = card_to_secret_name(card_key);
             println!("   {} = {} (masked)", secret_name, mask_value(value));
         }
 
@@ -272,31 +272,28 @@ fn handle_secrets_add(
             return Ok(());
         }
 
-        for (field, value) in &card.cards {
-            let secret_name = card_to_secret_name(field);
+        for (card_key, value) in &hand.cards {
+            let secret_name = card_to_secret_name(card_key);
             provider
                 .push_secret(&secret_name, value)
                 .with_context(|| format!("Failed to push secret: {}", secret_name))?;
             println!("Pushed: {}", secret_name);
         }
     } else {
-        let field = field_name.ok_or_else(|| {
+        let card = card_name.ok_or_else(|| {
             ProviderError::ConfigError(
-                "Must specify field name (e.g., card.field) or use --expand".to_string(),
+                "Must specify card name (e.g., hand.card) or use --expand".to_string(),
             )
         })?;
 
-        let value = card.cards.get(field).ok_or_else(|| {
-            ProviderError::ConfigError(format!(
-                "Field '{}' not found in card '{}'",
-                field, card_name
-            ))
+        let value = hand.cards.get(card).ok_or_else(|| {
+            ProviderError::ConfigError(format!("Card '{}' not found in hand '{}'", card, hand_name))
         })?;
 
         let secret_name = as_name
             .as_ref()
             .map(|s| s.to_string())
-            .unwrap_or_else(|| card_to_secret_name(field));
+            .unwrap_or_else(|| card_to_secret_name(card));
 
         println!(
             "About to push secret to {} / {}:",

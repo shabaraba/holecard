@@ -16,7 +16,7 @@ This guide covers Holecard's SSH key management features, including secure stora
 
 Holecard provides secure SSH key management with:
 
-- **Encrypted storage**: SSH keys stored in hand with Argon2id + AES-256-GCM
+- **Encrypted storage**: SSH keys stored in deck with Argon2id + AES-256-GCM
 - **ssh-agent integration**: Automatic key loading and unloading
 - **Alias support**: Connect using memorable aliases instead of full SSH strings
 - **Passphrase management**: Securely store and use key passphrases
@@ -33,8 +33,8 @@ Traditional SSH key management has several pain points:
 
 Holecard solves these problems:
 
-✅ Keys encrypted in hand with dual-key encryption
-✅ Automatic passphrase via hand
+✅ Keys encrypted in deck with dual-key encryption
+✅ Automatic passphrase via deck
 ✅ Centralized key management with aliases
 ✅ Keys never written to disk in plaintext
 
@@ -42,14 +42,14 @@ Holecard solves these problems:
 
 ```bash
 # Add SSH key from file
-hc add github-key \
+hc hand add github-key \
   --file private_key=~/.ssh/id_ed25519 \
   -f alias="git@github.com"
 
 # Connect via SSH (auto-loads key)
 hc ssh connect git@github.com
 
-# Or use card name
+# Or use hand name
 hc ssh connect github-key
 
 # List loaded keys
@@ -66,24 +66,24 @@ hc ssh unload github-key
 **Recommended method** - preserves newlines and formatting:
 
 ```bash
-hc add my-server \
+hc hand add my-server \
   --file private_key=~/.ssh/id_rsa \
   -f alias="user@example.com" \
   -f passphrase="optional-passphrase"
 ```
 
-**Fields:**
+**Cards:**
 - `private_key`: Path to private key file (required)
 - `alias`: SSH connection string or shorthand (optional, comma-separated for multiple)
 - `passphrase`: Key passphrase if encrypted (optional)
 
-### Interactive Card
+### Interactive Hand
 
 ```bash
-hc add my-server
+hc hand add my-server
 
 # Prompted for:
-# - Fields to add (select "private_key")
+# - Cards to add (select "private_key")
 # - File path: ~/.ssh/id_rsa
 # - Alias: user@example.com
 # - Passphrase: (optional)
@@ -92,7 +92,7 @@ hc add my-server
 ### Multiple Aliases
 
 ```bash
-hc add prod-server \
+hc hand add prod-server \
   --file private_key=~/.ssh/prod_key \
   -f alias="prod,user@prod.example.com,10.0.1.100"
 
@@ -111,7 +111,7 @@ hc ssh add github-key ~/.ssh/id_ed25519 \
   --passphrase "optional"
 
 # Equivalent to:
-hc add github-key \
+hc hand add github-key \
   --file private_key=~/.ssh/id_ed25519 \
   -f alias="git@github.com" \
   -f passphrase="optional"
@@ -125,12 +125,12 @@ hc add github-key \
 # Using alias
 hc ssh connect git@github.com
 
-# Using card name
+# Using hand name
 hc ssh connect github-key
 ```
 
 **What happens:**
-1. Holecard finds card by alias or name
+1. Holecard finds hand by alias or name
 2. Retrieves private key and passphrase from hand
 3. Loads key into ssh-agent (with passphrase if needed)
 4. Executes `ssh` with the connection string
@@ -156,8 +156,8 @@ hc ssh connect prod -- -p 2222 -v -o StrictHostKeyChecking=no
 For servers that use password authentication instead of keys:
 
 ```bash
-# Add card with password field
-hc add my-server \
+# Add hand with password card
+hc hand add my-server \
   -f username=user \
   -f password="mypassword" \
   -f alias="user@server.com"
@@ -188,13 +188,13 @@ Shows:
 - Key fingerprints (SHA256)
 - Comment/identifier
 
-### List Hand SSH Cards
+### List SSH Hands in Deck
 
 ```bash
-hc list
+hc hand list
 ```
 
-Shows all cards in hand, including SSH keys (cards with `private_key` field).
+Shows all hands in deck, including SSH keys (hands with `private_key` card).
 
 ### Load Key Manually
 
@@ -212,27 +212,27 @@ hc ssh load my-server --lifetime 28800
 # Remove specific key from ssh-agent
 hc ssh unload my-server
 
-# Lock hand (removes all loaded keys)
+# Lock deck (removes all loaded keys)
 hc lock
 ```
 
-### Update SSH Key
+### Update SSH Hand
 
 ```bash
-# Edit existing card
-hc edit my-server --file private_key=~/.ssh/new_key
+# Edit existing hand
+hc hand edit my-server --file private_key=~/.ssh/new_key
 
 # Update alias
-hc edit my-server -f alias="newuser@example.com"
+hc hand edit my-server -f alias="newuser@example.com"
 
 # Update passphrase
-hc edit my-server -f passphrase="newpassphrase"
+hc hand edit my-server -f passphrase="newpassphrase"
 ```
 
-### Remove SSH Key
+### Remove SSH Hand
 
 ```bash
-hc rm my-server
+hc hand rm my-server
 ```
 
 ## Advanced Usage
@@ -245,18 +245,18 @@ hc ssh load github-key
 ssh -A user@jumpbox.example.com
 ```
 
-### Multiple Keys per Card
+### Multiple Keys per Hand
 
-You can store multiple keys in separate cards with the same alias:
+You can store multiple keys in separate hands with the same alias:
 
 ```bash
 # Personal GitHub key
-hc add github-personal \
+hc hand add github-personal \
   --file private_key=~/.ssh/id_ed25519_personal \
   -f alias="git@github.com"
 
 # Work GitHub key
-hc add github-work \
+hc hand add github-work \
   --file private_key=~/.ssh/id_ed25519_work \
   -f alias="git@github.com-work"
 
@@ -293,7 +293,7 @@ ssh-keygen -t ed25519 -C "user@example.com" -f ~/.ssh/id_ed25519_new
 ssh-keygen -t rsa -b 4096 -C "user@example.com" -f ~/.ssh/id_rsa_new
 
 # Add to Holecard
-hc add my-new-key \
+hc hand add my-new-key \
   --file private_key=~/.ssh/id_ed25519_new \
   -f alias="user@server.com"
 
@@ -305,9 +305,9 @@ rm ~/.ssh/id_ed25519_new
 
 ### Key Storage
 
-✅ **Encrypted in hand**: Keys stored with Argon2id + AES-256-GCM
+✅ **Encrypted in deck**: Keys stored with Argon2id + AES-256-GCM
 ✅ **No plaintext on disk**: Keys never written to `~/.ssh/` unless you explicitly do so
-✅ **Passphrase protection**: Key passphrases stored encrypted in hand
+✅ **Passphrase protection**: Key passphrases stored encrypted in deck
 
 ### ssh-agent Security
 
@@ -322,8 +322,8 @@ rm ~/.ssh/id_ed25519_new
 
 ### Passphrase Best Practices
 
-- Use strong passphrases for SSH keys (even when in hand)
-- Different passphrase than hand master password
+- Use strong passphrases for SSH keys (even when in deck)
+- Different passphrase than deck master password
 - Consider passphraseless keys only for automation use cases
 
 ### Audit Trail
@@ -332,8 +332,8 @@ rm ~/.ssh/id_ed25519_new
 # Check what keys are loaded
 hc ssh list
 
-# View SSH card details (without exposing key)
-hc get my-server
+# View SSH hand details (without exposing key)
+hc hand get my-server
 
 # Export for backup (encrypted)
 hc export ~/backup.json
@@ -350,8 +350,8 @@ ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_new
 # 2. Add public key to servers
 ssh-copy-id -i ~/.ssh/id_ed25519_new.pub user@server.com
 
-# 3. Update Holecard card
-hc edit my-server --file private_key=~/.ssh/id_ed25519_new
+# 3. Update Holecard hand
+hc hand edit my-server --file private_key=~/.ssh/id_ed25519_new
 
 # 4. Remove old key from servers
 # (manually remove from ~/.ssh/authorized_keys on each server)
@@ -386,10 +386,10 @@ ssh -v user@server.com
 
 ### "Bad passphrase"
 
-Key passphrase in hand is incorrect. Update it:
+Key passphrase in deck is incorrect. Update it:
 
 ```bash
-hc edit my-server -f passphrase="correct-passphrase"
+hc hand edit my-server -f passphrase="correct-passphrase"
 ```
 
 ### Keys Not Unloading
@@ -409,7 +409,7 @@ eval $(ssh-agent -s)
 
 ```bash
 # Add GitHub SSH key
-hc add github \
+hc hand add github \
   --file private_key=~/.ssh/id_ed25519 \
   -f alias="git@github.com"
 
@@ -424,12 +424,12 @@ git clone git@github.com:user/repo.git
 
 ```bash
 # Add production server
-hc add prod \
+hc hand add prod \
   --file private_key=~/.ssh/prod_key \
   -f alias="prod,user@prod.example.com"
 
 # Add staging server
-hc add staging \
+hc hand add staging \
   --file private_key=~/.ssh/staging_key \
   -f alias="staging,user@staging.example.com"
 
@@ -453,7 +453,7 @@ ssh -J user@bastion.example.com user@internal.example.com
 ## Related Documentation
 
 - [Security Guide](SECURITY.md) - Encryption and security model
-- [Multi-Hand Support](MULTI_VAULT.md) - Managing multiple hands
+- [Multi-Deck Support](MULTI_VAULT.md) - Managing multiple decks
 
 ## License
 
