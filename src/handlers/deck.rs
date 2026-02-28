@@ -145,8 +145,7 @@ pub fn handle_get(
                 if let Some(password) = card.cards.get("password") {
                     password.clone()
                 } else {
-                    card
-                        .cards
+                    card.cards
                         .values()
                         .next()
                         .context("No fields to copy")?

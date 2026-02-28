@@ -1,7 +1,7 @@
 use crate::cli::commands::{ProviderAddCommands, ProviderCommands, ProviderSecretsCommands};
 use crate::deck_context::DeckContext;
 use crate::domain::{
-    error::ProviderError, card_to_secret_name, ProviderConfig, TemplateEngine, Deck,
+    card_to_secret_name, error::ProviderError, Deck, ProviderConfig, TemplateEngine,
 };
 use crate::infrastructure::{create_provider, CryptoServiceImpl, ProviderStorage};
 use anyhow::{Context, Result};
@@ -286,15 +286,12 @@ fn handle_secrets_add(
             )
         })?;
 
-        let value = card
-            .cards
-            .get(field)
-            .ok_or_else(|| {
-                ProviderError::ConfigError(format!(
-                    "Field '{}' not found in card '{}'",
-                    field, entry_name
-                ))
-            })?;
+        let value = card.cards.get(field).ok_or_else(|| {
+            ProviderError::ConfigError(format!(
+                "Field '{}' not found in card '{}'",
+                field, entry_name
+            ))
+        })?;
 
         let secret_name = as_name
             .as_ref()

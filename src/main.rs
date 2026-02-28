@@ -8,7 +8,7 @@ mod multi_deck_context;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::commands::{Cli, Commands, CardCommands};
+use cli::commands::{CardCommands, Cli, Commands};
 use config::get_config_dir;
 use infrastructure::KeyringManager;
 
@@ -72,12 +72,7 @@ fn main() -> Result<()> {
                 rm_field,
             } => {
                 if interactive {
-                    handlers::deck::handle_edit_interactive(
-                        &name,
-                        deck_name,
-                        &keyring,
-                        &config_dir,
-                    )
+                    handlers::deck::handle_edit_interactive(&name, deck_name, &keyring, &config_dir)
                 } else {
                     handlers::deck::handle_edit(
                         &name,
@@ -125,8 +120,7 @@ fn main() -> Result<()> {
             handlers::totp::handle_totp(subcommand, deck_name, &keyring, &config_dir)
         }
         Commands::Provider { subcommand } => {
-            let ctx =
-                multi_deck_context::MultiDeckContext::load(deck_name, &keyring, &config_dir)?;
+            let ctx = multi_deck_context::MultiDeckContext::load(deck_name, &keyring, &config_dir)?;
             handlers::provider::handle_provider(&ctx.inner, &subcommand)
         }
         Commands::Generate {

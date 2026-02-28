@@ -12,11 +12,7 @@ pub struct Hand {
 }
 
 impl Hand {
-    pub fn new(
-        name: String,
-        cards: HashMap<String, String>,
-        notes: Option<String>,
-    ) -> Self {
+    pub fn new(name: String, cards: HashMap<String, String>, notes: Option<String>) -> Self {
         let now = Utc::now();
         Self {
             name,

@@ -2,7 +2,6 @@ use crate::domain::Deck;
 
 use anyhow::{bail, Result};
 
-
 const KEY_FORMATS: &[(&str, SshKeyType)] = &[
     ("OPENSSH PRIVATE KEY", SshKeyType::OpenSsh),
     ("RSA PRIVATE KEY", SshKeyType::Rsa),

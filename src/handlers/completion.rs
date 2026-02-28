@@ -6,7 +6,7 @@ use std::path::Path;
 
 use crate::cli::commands::Cli;
 use crate::config::Config;
-use crate::infrastructure::{SessionManager, DeckRegistry};
+use crate::infrastructure::{DeckRegistry, SessionManager};
 
 pub fn handle_completion(shell: &str) -> Result<()> {
     let mut cmd = Cli::command();

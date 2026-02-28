@@ -61,8 +61,7 @@ impl TemplateEngine {
 
     #[allow(dead_code)]
     fn expand_hand(hand: &Hand) -> String {
-        hand
-            .cards
+        hand.cards
             .iter()
             .map(|(k, v)| format!("{}={}", k.to_uppercase(), v))
             .collect::<Vec<_>>()
@@ -116,8 +115,7 @@ mod tests {
     fn test_render_multiple_fields() {
         let hand = create_test_hand();
         let result =
-            TemplateEngine::render("Connect to {{card.host}} as {{card.username}}", &hand)
-                .unwrap();
+            TemplateEngine::render("Connect to {{card.host}} as {{card.username}}", &hand).unwrap();
         assert_eq!(result, "Connect to db.example.com as john");
     }
 

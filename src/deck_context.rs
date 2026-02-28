@@ -89,11 +89,8 @@ impl DeckContext {
                 .load_with_cached_key(deck_path, &derived_key)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            let hand_names: Vec<String> = deck
-                .list_hands()
-                .iter()
-                .map(|e| e.name.clone())
-                .collect();
+            let hand_names: Vec<String> =
+                deck.list_hands().iter().map(|e| e.name.clone()).collect();
 
             session.save_session(&derived_key, &salt, hand_names.clone())?;
             let session_data = SessionData {

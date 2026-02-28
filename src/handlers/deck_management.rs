@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::cli::commands::HandCommands;
 use crate::domain::CryptoService;
 use crate::infrastructure::{
-    CryptoServiceImpl, KeyringManager, SessionManager, DeckRegistry, DeckStorage,
+    CryptoServiceImpl, DeckRegistry, DeckStorage, KeyringManager, SessionManager,
 };
 use crate::multi_deck_context::MultiDeckContext;
 use crate::{cli::input, config::Config, domain::Deck};
@@ -21,12 +21,8 @@ pub fn handle_deck(
         HandCommands::Create { name } => handle_create(name, keyring, config_dir),
         HandCommands::Delete { name, force } => handle_delete(name, force, config_dir),
         HandCommands::Use { name } => handle_use(name, config_dir),
-        HandCommands::Move { card, to_hand } => {
-            handle_move(card, to_hand, keyring, config_dir)
-        }
-        HandCommands::Copy { card, to_hand } => {
-            handle_copy(card, to_hand, keyring, config_dir)
-        }
+        HandCommands::Move { card, to_hand } => handle_move(card, to_hand, keyring, config_dir),
+        HandCommands::Copy { card, to_hand } => handle_copy(card, to_hand, keyring, config_dir),
         HandCommands::Passwd => handle_passwd(vault_name, keyring, config_dir),
     }
 }
@@ -95,7 +91,7 @@ fn handle_create(name: String, keyring: &KeyringManager, config_dir: &Path) -> R
     let storage = DeckStorage::new(crypto);
 
     let (derived_key, salt) = storage
-        . derive_key_from_deck(&vault_path, &master_password, &secret_key)
+        .derive_key_from_deck(&vault_path, &master_password, &secret_key)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     storage

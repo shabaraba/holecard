@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::config::Config;
-use crate::infrastructure::{SessionManager, DeckRegistry};
+use crate::infrastructure::{DeckRegistry, SessionManager};
 
 pub fn handle_lock(config_dir: &Path) -> Result<()> {
     let config = Config::load(config_dir)?;

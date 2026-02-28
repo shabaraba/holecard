@@ -270,8 +270,7 @@ fn handle_ssh_list(
 fn is_ssh_hand(hand: &Hand) -> bool {
     hand.cards.contains_key("alias")
         || hand.cards.contains_key("private_key")
-        || (hand.cards.contains_key("username")
-            && hand.cards.contains_key("hostname"))
+        || (hand.cards.contains_key("username") && hand.cards.contains_key("hostname"))
 }
 
 fn get_auth_type(hand: &Hand) -> &str {
@@ -311,8 +310,7 @@ fn handle_ssh_connect(
     let ssh_target = if target.contains('@') {
         target.to_string()
     } else {
-        card
-            .cards
+        card.cards
             .get("host")
             .or_else(|| card.cards.get("alias"))
             .and_then(|value| value.split(',').next().map(|s| s.trim().to_string()))
