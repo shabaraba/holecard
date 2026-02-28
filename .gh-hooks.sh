@@ -4,6 +4,32 @@
 export GH_HOOKS_RELEASE_PATTERN="${GH_HOOKS_RELEASE_PATTERN:-^chore\(main\): release}"
 export GH_HOOKS_DEBUG="${GH_HOOKS_DEBUG:-0}"
 
+# pre-pushフック: pushする前にフォーマットとClippyを実行
+gh_hook_pre_push() {
+  echo "🔍 Running pre-push checks..."
+
+  # cargo fmtでフォーマットチェック
+  echo "→ Checking code format..."
+  if ! cargo fmt --check; then
+    echo "✗ Code formatting check failed"
+    echo "  Run 'cargo fmt' to fix formatting issues"
+    return 1
+  fi
+  echo "✓ Code format check passed"
+
+  # clippy with warnings as errors
+  echo "→ Running clippy..."
+  if ! cargo clippy -- -D warnings; then
+    echo "✗ Clippy check failed"
+    echo "  Fix all warnings before pushing"
+    return 1
+  fi
+  echo "✓ Clippy check passed"
+
+  echo "✅ All pre-push checks passed"
+  return 0
+}
+
 # 通常のPRマージ時: release-pleaseを実行してリリースPRを作成・更新
 gh_hook_pr_merged() {
   local pr_title="$1"
