@@ -1,16 +1,16 @@
-use crate::domain::{Entry, Vault};
+use crate::domain::{Deck, Hand};
 use anyhow::{Context, Result};
 use regex::Regex;
 
 pub struct TemplateEngine;
 
 impl TemplateEngine {
-    /// Render a template string with entry data
+    /// Render a template string with hand data
     /// Supports:
-    /// - {{entry.field}} - specific field from entry
-    /// - {{entry}} - all fields as KEY=value format
+    /// - {{card.key}} - specific card value from hand
+    /// - {{card}} - all cards as KEY=value format
     #[allow(dead_code)]
-    pub fn render(template: &str, entry: &Entry) -> Result<String> {
+    pub fn render(template: &str, hand: &Hand) -> Result<String> {
         let re = Regex::new(r"\{\{([^}]+)\}\}").context("Failed to compile regex")?;
 
         let mut result = template.to_string();
@@ -20,13 +20,13 @@ impl TemplateEngine {
             let full_match = &cap[0];
             let var_name = cap[1].trim();
 
-            let replacement = if var_name == "entry" {
-                // {{entry}} -> expand all fields
-                Self::expand_entry(entry)
-            } else if let Some((entry_part, field_part)) = var_name.split_once('.') {
-                // {{entry.field}} -> lookup specific field
-                if entry_part == "entry" {
-                    if let Some(value) = entry.custom_fields.get(field_part) {
+            let replacement = if var_name == "card" {
+                // {{hand}} -> expand all fields
+                Self::expand_hand(hand)
+            } else if let Some((card_part, field_part)) = var_name.split_once('.') {
+                // {{hand.field}} -> lookup specific field
+                if card_part == "card" {
+                    if let Some(value) = hand.cards.get(field_part) {
                         value.clone()
                     } else {
                         missing_fields.push(field_part.to_string());
@@ -34,13 +34,13 @@ impl TemplateEngine {
                     }
                 } else {
                     anyhow::bail!(
-                        "Invalid template variable: {}. Only 'entry' is supported",
-                        entry_part
+                        "Invalid template variable: {}. Only 'card' is supported",
+                        card_part
                     );
                 }
             } else {
                 anyhow::bail!(
-                    "Invalid template syntax: {}. Use {{{{entry.field}}}} or {{{{entry}}}}",
+                    "Invalid template syntax: {}. Use {{{{card.field}}}} or {{{{card}}}}",
                     var_name
                 );
             };
@@ -50,8 +50,8 @@ impl TemplateEngine {
 
         if !missing_fields.is_empty() {
             anyhow::bail!(
-                "Missing fields in entry '{}': {}",
-                entry.name,
+                "Missing cards in hand '{}': {}",
+                hand.name(),
                 missing_fields.join(", ")
             );
         }
@@ -60,30 +60,29 @@ impl TemplateEngine {
     }
 
     #[allow(dead_code)]
-    fn expand_entry(entry: &Entry) -> String {
-        entry
-            .custom_fields
+    fn expand_hand(hand: &Hand) -> String {
+        hand.cards
             .iter()
             .map(|(k, v)| format!("{}={}", k.to_uppercase(), v))
             .collect::<Vec<_>>()
             .join("\n")
     }
 
-    /// Resolve a template string that may contain {{entry_name.field}} references
+    /// Resolve a template string that may contain {{hand_name.card}} references
     /// Returns the resolved value or the original string if not a template
-    pub fn resolve_value(value: &str, vault: &Vault) -> Result<String> {
+    pub fn resolve_value(value: &str, deck: &Deck) -> Result<String> {
         let re = Regex::new(r"^\{\{([^.]+)\.([^}]+)\}\}$").context("Failed to compile regex")?;
 
         if let Some(cap) = re.captures(value) {
-            let entry_name = cap[1].trim();
-            let field_name = cap[2].trim();
+            let hand_name = cap[1].trim();
+            let card_name = cap[2].trim();
 
-            let entry = vault
-                .get_entry(entry_name)
-                .with_context(|| format!("Entry '{}' not found in vault", entry_name))?;
+            let hand = deck
+                .get_hand(hand_name)
+                .with_context(|| format!("Hand '{}' not found in deck", hand_name))?;
 
-            entry.custom_fields.get(field_name).cloned().ok_or_else(|| {
-                anyhow::anyhow!("Field '{}' not found in entry '{}'", field_name, entry_name)
+            hand.cards.get(card_name).cloned().ok_or_else(|| {
+                anyhow::anyhow!("Card '{}' not found in hand '{}'", card_name, hand_name)
             })
         } else {
             Ok(value.to_string())
@@ -96,35 +95,34 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    fn create_test_entry() -> Entry {
-        let mut fields = HashMap::new();
-        fields.insert("username".to_string(), "john".to_string());
-        fields.insert("password".to_string(), "secret123".to_string());
-        fields.insert("host".to_string(), "db.example.com".to_string());
+    fn create_test_hand() -> Hand {
+        let mut cards = HashMap::new();
+        cards.insert("username".to_string(), "john".to_string());
+        cards.insert("password".to_string(), "secret123".to_string());
+        cards.insert("host".to_string(), "db.example.com".to_string());
 
-        Entry::new("testentry".to_string(), fields, None)
+        Hand::new("testhand".to_string(), cards, None)
     }
 
     #[test]
     fn test_render_single_field() {
-        let entry = create_test_entry();
-        let result = TemplateEngine::render("User: {{entry.username}}", &entry).unwrap();
+        let hand = create_test_hand();
+        let result = TemplateEngine::render("User: {{card.username}}", &hand).unwrap();
         assert_eq!(result, "User: john");
     }
 
     #[test]
     fn test_render_multiple_fields() {
-        let entry = create_test_entry();
+        let hand = create_test_hand();
         let result =
-            TemplateEngine::render("Connect to {{entry.host}} as {{entry.username}}", &entry)
-                .unwrap();
+            TemplateEngine::render("Connect to {{card.host}} as {{card.username}}", &hand).unwrap();
         assert_eq!(result, "Connect to db.example.com as john");
     }
 
     #[test]
-    fn test_render_entire_entry() {
-        let entry = create_test_entry();
-        let result = TemplateEngine::render("{{entry}}", &entry).unwrap();
+    fn test_render_entire_hand() {
+        let hand = create_test_hand();
+        let result = TemplateEngine::render("{{card}}", &hand).unwrap();
 
         // Order might vary, check all fields are present
         assert!(result.contains("USERNAME=john"));
@@ -134,16 +132,16 @@ mod tests {
 
     #[test]
     fn test_missing_field_error() {
-        let entry = create_test_entry();
-        let result = TemplateEngine::render("{{entry.nonexistent}}", &entry);
+        let hand = create_test_hand();
+        let result = TemplateEngine::render("{{card.nonexistent}}", &hand);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Missing fields"));
+        assert!(result.unwrap_err().to_string().contains("Missing cards"));
     }
 
     #[test]
     fn test_invalid_syntax() {
-        let entry = create_test_entry();
-        let result = TemplateEngine::render("{{invalid}}", &entry);
+        let hand = create_test_hand();
+        let result = TemplateEngine::render("{{invalid}}", &hand);
         assert!(result.is_err());
     }
 }

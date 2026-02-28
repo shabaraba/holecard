@@ -4,32 +4,32 @@ use std::process::Command;
 
 use crate::domain::TemplateEngine;
 use crate::infrastructure::KeyringManager;
-use crate::multi_vault_context::MultiVaultContext;
+use crate::multi_deck_context::MultiDeckContext;
 
 pub fn handle_inject(
-    entry_name: &str,
+    card_name: &str,
     template: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
-    let entry = ctx
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let hand = ctx
         .inner
-        .vault
-        .get_entry(entry_name)
+        .deck
+        .get_hand(card_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    let rendered = TemplateEngine::render(template, entry)?;
+    let rendered = TemplateEngine::render(template, hand)?;
     println!("{}", rendered);
 
     Ok(())
 }
 
 pub fn handle_run(
-    entry_name: &str,
+    card_name: &str,
     command: &[String],
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -37,17 +37,17 @@ pub fn handle_run(
         anyhow::bail!("No command specified");
     }
 
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
-    let entry = ctx
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let hand = ctx
         .inner
-        .vault
-        .get_entry(entry_name)
+        .deck
+        .get_hand(card_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let mut cmd = Command::new(&command[0]);
     cmd.args(&command[1..]);
 
-    for (key, value) in &entry.custom_fields {
+    for (key, value) in &hand.cards {
         cmd.env(key.to_uppercase(), value);
     }
 

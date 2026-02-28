@@ -1,7 +1,7 @@
 use crate::cli::commands::{ProviderAddCommands, ProviderCommands, ProviderSecretsCommands};
-use crate::context::VaultContext;
+use crate::deck_context::DeckContext;
 use crate::domain::{
-    error::ProviderError, field_to_secret_name, ProviderConfig, TemplateEngine, Vault,
+    card_to_secret_name, error::ProviderError, Deck, ProviderConfig, TemplateEngine,
 };
 use crate::infrastructure::{create_provider, CryptoServiceImpl, ProviderStorage};
 use anyhow::{Context, Result};
@@ -16,7 +16,7 @@ struct ExtractedCredentials {
 
 fn extract_credentials(
     provider: &ProviderAddCommands,
-    vault: &Vault,
+    deck: &Deck,
 ) -> Result<ExtractedCredentials> {
     match provider {
         ProviderAddCommands::Github {
@@ -27,11 +27,11 @@ fn extract_credentials(
             let mut creds = HashMap::new();
             creds.insert(
                 "repo".to_string(),
-                TemplateEngine::resolve_value(repo, vault)?,
+                TemplateEngine::resolve_value(repo, deck)?,
             );
             creds.insert(
                 "token".to_string(),
-                TemplateEngine::resolve_value(token, vault)?,
+                TemplateEngine::resolve_value(token, deck)?,
             );
             Ok(ExtractedCredentials {
                 provider_type: "github",
@@ -48,15 +48,15 @@ fn extract_credentials(
             let mut creds = HashMap::new();
             creds.insert(
                 "account_id".to_string(),
-                TemplateEngine::resolve_value(account_id, vault)?,
+                TemplateEngine::resolve_value(account_id, deck)?,
             );
             creds.insert(
                 "worker_name".to_string(),
-                TemplateEngine::resolve_value(worker_name, vault)?,
+                TemplateEngine::resolve_value(worker_name, deck)?,
             );
             creds.insert(
                 "token".to_string(),
-                TemplateEngine::resolve_value(token, vault)?,
+                TemplateEngine::resolve_value(token, deck)?,
             );
             Ok(ExtractedCredentials {
                 provider_type: "cloudflare",
@@ -67,7 +67,7 @@ fn extract_credentials(
     }
 }
 
-pub fn handle_provider(ctx: &VaultContext, subcommand: &ProviderCommands) -> Result<()> {
+pub fn handle_provider(ctx: &DeckContext, subcommand: &ProviderCommands) -> Result<()> {
     match subcommand {
         ProviderCommands::List => handle_list(ctx),
         ProviderCommands::Add { provider } => handle_add(ctx, provider),
@@ -84,7 +84,7 @@ pub fn handle_provider(ctx: &VaultContext, subcommand: &ProviderCommands) -> Res
     }
 }
 
-fn handle_secrets_command(ctx: &VaultContext, subcommand: &ProviderSecretsCommands) -> Result<()> {
+fn handle_secrets_command(ctx: &DeckContext, subcommand: &ProviderSecretsCommands) -> Result<()> {
     match subcommand {
         ProviderSecretsCommands::List {
             provider_type,
@@ -93,14 +93,14 @@ fn handle_secrets_command(ctx: &VaultContext, subcommand: &ProviderSecretsComman
         ProviderSecretsCommands::Add {
             provider_type,
             provider_id,
-            entry_field,
+            card_field,
             as_name,
             expand,
         } => handle_secrets_add(
             ctx,
             provider_type,
             provider_id,
-            entry_field,
+            card_field,
             as_name,
             *expand,
         ),
@@ -116,16 +116,16 @@ fn create_storage() -> ProviderStorage<CryptoServiceImpl> {
     ProviderStorage::new(CryptoServiceImpl::new())
 }
 
-fn get_provider_path(ctx: &VaultContext) -> std::path::PathBuf {
+fn get_provider_path(ctx: &DeckContext) -> std::path::PathBuf {
     ctx.config_dir.join("providers.enc")
 }
 
-fn load_providers(ctx: &VaultContext) -> Result<HashMap<String, ProviderConfig>> {
+fn load_providers(ctx: &DeckContext) -> Result<HashMap<String, ProviderConfig>> {
     let storage = create_storage();
     storage.load(&get_provider_path(ctx), &ctx.session_data.derived_key)
 }
 
-fn save_providers(ctx: &VaultContext, configs: &HashMap<String, ProviderConfig>) -> Result<()> {
+fn save_providers(ctx: &DeckContext, configs: &HashMap<String, ProviderConfig>) -> Result<()> {
     let storage = create_storage();
     storage.save(
         configs,
@@ -159,7 +159,7 @@ fn confirm_action(prompt: &str) -> Result<bool> {
 }
 
 fn handle_edit(
-    ctx: &VaultContext,
+    ctx: &DeckContext,
     provider_type: &str,
     provider_id: &str,
     provider: &ProviderAddCommands,
@@ -171,7 +171,7 @@ fn handle_edit(
         return Err(ProviderError::ProviderNotFound(key).into());
     }
 
-    let extracted = extract_credentials(provider, &ctx.vault)?;
+    let extracted = extract_credentials(provider, &ctx.deck)?;
 
     if extracted.provider_type != provider_type {
         return Err(ProviderError::ConfigError(
@@ -193,8 +193,8 @@ fn handle_edit(
     Ok(())
 }
 
-fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> {
-    let extracted = extract_credentials(provider, &ctx.vault)?;
+fn handle_add(ctx: &DeckContext, provider: &ProviderAddCommands) -> Result<()> {
+    let extracted = extract_credentials(provider, &ctx.deck)?;
     let mut configs = load_providers(ctx)?;
     let key = make_provider_key(extracted.provider_type, &extracted.provider_id);
 
@@ -223,10 +223,10 @@ fn handle_add(ctx: &VaultContext, provider: &ProviderAddCommands) -> Result<()> 
 }
 
 fn handle_secrets_add(
-    ctx: &VaultContext,
+    ctx: &DeckContext,
     provider_type: &str,
     provider_id: &str,
-    entry_field: &str,
+    card_field: &str,
     as_name: &Option<String>,
     expand: bool,
 ) -> Result<()> {
@@ -234,36 +234,36 @@ fn handle_secrets_add(
     let config = get_provider_config(&configs, provider_type, provider_id)?;
     let provider = create_provider(config)?;
 
-    let parts: Vec<&str> = entry_field.split('.').collect();
-    let (entry_name, field_name) = if parts.len() == 2 {
+    let parts: Vec<&str> = card_field.split('.').collect();
+    let (hand_name, card_name) = if parts.len() == 2 {
         (parts[0], Some(parts[1]))
     } else if parts.len() == 1 {
         (parts[0], None)
     } else {
-        return Err(ProviderError::InvalidFieldFormat(entry_field.to_string()).into());
+        return Err(ProviderError::InvalidCardFormat(card_field.to_string()).into());
     };
 
-    let entry = ctx
-        .vault
-        .get_entry(entry_name)
-        .map_err(|_| ProviderError::FieldNotFound(entry_name.to_string()))?;
+    let hand = ctx
+        .deck
+        .get_hand(hand_name)
+        .map_err(|_| ProviderError::CardNotFound(hand_name.to_string()))?;
 
     if expand {
-        if field_name.is_some() {
+        if card_name.is_some() {
             return Err(ProviderError::ConfigError(
-                "Cannot use --expand with specific field".to_string(),
+                "Cannot use --expand with specific card".to_string(),
             )
             .into());
         }
 
         println!(
-            "About to push {} field(s) to {} / {}:",
-            entry.custom_fields.len(),
+            "About to push {} card(s) to {} / {}:",
+            hand.cards.len(),
             provider_type,
             provider_id
         );
-        for (field, value) in &entry.custom_fields {
-            let secret_name = field_to_secret_name(field);
+        for (card_key, value) in &hand.cards {
+            let secret_name = card_to_secret_name(card_key);
             println!("   {} = {} (masked)", secret_name, mask_value(value));
         }
 
@@ -272,29 +272,28 @@ fn handle_secrets_add(
             return Ok(());
         }
 
-        for (field, value) in &entry.custom_fields {
-            let secret_name = field_to_secret_name(field);
+        for (card_key, value) in &hand.cards {
+            let secret_name = card_to_secret_name(card_key);
             provider
                 .push_secret(&secret_name, value)
                 .with_context(|| format!("Failed to push secret: {}", secret_name))?;
             println!("Pushed: {}", secret_name);
         }
     } else {
-        let field = field_name.ok_or_else(|| {
+        let card = card_name.ok_or_else(|| {
             ProviderError::ConfigError(
-                "Must specify field name (e.g., entry.field) or use --expand".to_string(),
+                "Must specify card name (e.g., hand.card) or use --expand".to_string(),
             )
         })?;
 
-        let value = entry
-            .custom_fields
-            .get(field)
-            .ok_or_else(|| ProviderError::FieldNotFound(field.to_string()))?;
+        let value = hand.cards.get(card).ok_or_else(|| {
+            ProviderError::ConfigError(format!("Card '{}' not found in hand '{}'", card, hand_name))
+        })?;
 
         let secret_name = as_name
             .as_ref()
             .map(|s| s.to_string())
-            .unwrap_or_else(|| field_to_secret_name(field));
+            .unwrap_or_else(|| card_to_secret_name(card));
 
         println!(
             "About to push secret to {} / {}:",
@@ -317,7 +316,7 @@ fn handle_secrets_add(
     Ok(())
 }
 
-fn handle_list(ctx: &VaultContext) -> Result<()> {
+fn handle_list(ctx: &DeckContext) -> Result<()> {
     let configs = load_providers(ctx)?;
 
     if configs.is_empty() {
@@ -336,7 +335,7 @@ fn handle_list(ctx: &VaultContext) -> Result<()> {
     Ok(())
 }
 
-fn handle_secrets_list(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> Result<()> {
+fn handle_secrets_list(ctx: &DeckContext, provider_type: &str, provider_id: &str) -> Result<()> {
     let configs = load_providers(ctx)?;
     let config = get_provider_config(&configs, provider_type, provider_id)?;
     let provider = create_provider(config)?;
@@ -356,7 +355,7 @@ fn handle_secrets_list(ctx: &VaultContext, provider_type: &str, provider_id: &st
 }
 
 fn handle_secrets_remove(
-    ctx: &VaultContext,
+    ctx: &DeckContext,
     provider_type: &str,
     provider_id: &str,
     secret_name: &str,
@@ -382,7 +381,7 @@ fn handle_secrets_remove(
     Ok(())
 }
 
-fn handle_remove(ctx: &VaultContext, provider_type: &str, provider_id: &str) -> Result<()> {
+fn handle_remove(ctx: &DeckContext, provider_type: &str, provider_id: &str) -> Result<()> {
     let mut configs = load_providers(ctx)?;
     let key = make_provider_key(provider_type, provider_id);
 

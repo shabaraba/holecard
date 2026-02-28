@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use crate::domain::uri::SecretUri;
 use crate::infrastructure::KeyringManager;
-use crate::multi_vault_context::MultiVaultContext;
+use crate::multi_deck_context::MultiDeckContext;
 
 static TEMPLATE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:hc|op)://(?:[^/]+/)?[^/\s]+/[^\s]+").expect("Failed to compile template regex")
@@ -16,30 +16,31 @@ pub struct SecretResolver;
 impl SecretResolver {
     pub fn resolve(
         uri_str: &str,
-        default_vault: Option<&str>,
+        default_deck: Option<&str>,
         keyring: &KeyringManager,
         config_dir: &Path,
     ) -> Result<String> {
         let expanded = SecretUri::expand_env_vars(uri_str);
         let uri = SecretUri::parse(&expanded)?;
 
-        let vault_name = uri.vault.as_deref().or(default_vault);
-        let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+        let deck_name = uri.deck.as_deref().or(default_deck);
+        let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-        let entry = ctx
+        let hand = ctx
             .inner
-            .vault
-            .get_entry(&uri.item)
+            .deck
+            .get_hand(&uri.hand)
             .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-        entry.custom_fields.get(&uri.field).cloned().ok_or_else(|| {
-            anyhow::anyhow!("Field '{}' not found in entry '{}'", uri.field, uri.item)
-        })
+        hand.cards
+            .get(&uri.card)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Card '{}' not found in hand '{}'", uri.card, uri.hand))
     }
 
     pub fn resolve_template(
         template: &str,
-        default_vault: Option<&str>,
+        default_deck: Option<&str>,
         keyring: &KeyringManager,
         config_dir: &Path,
     ) -> Result<String> {
@@ -50,7 +51,7 @@ impl SecretResolver {
             let full_match = cap.get(0).unwrap();
             let uri_str = full_match.as_str().trim();
 
-            match Self::resolve(uri_str, default_vault, keyring, config_dir) {
+            match Self::resolve(uri_str, default_deck, keyring, config_dir) {
                 Ok(value) => {
                     replacements.push((full_match.range(), value));
                 }

@@ -5,14 +5,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VaultMetadata {
+pub struct DeckMetadata {
     pub name: String,
     pub path: PathBuf,
     pub created_at: DateTime<Local>,
     pub last_accessed: DateTime<Local>,
 }
 
-impl VaultMetadata {
+impl DeckMetadata {
     pub fn new(name: String, path: PathBuf) -> Self {
         let now = Local::now();
         Self {
@@ -28,17 +28,18 @@ impl VaultMetadata {
     }
 }
 
+// Note: Struct and field names retained for backward compatibility with vaults.toml
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct VaultsConfig {
     active_vault: String,
-    vaults: Vec<VaultMetadata>,
+    vaults: Vec<DeckMetadata>,
 }
 
-pub struct VaultRegistry {
+pub struct DeckRegistry {
     config_dir: PathBuf,
 }
 
-impl VaultRegistry {
+impl DeckRegistry {
     pub fn new(config_dir: PathBuf) -> Self {
         Self { config_dir }
     }
@@ -47,7 +48,7 @@ impl VaultRegistry {
         let registry = Self::new(config_dir.to_path_buf());
 
         if !registry.registry_path().exists() {
-            registry.migrate_legacy_vault()?;
+            registry.migrate_legacy_deck()?;
         }
 
         Ok(registry)
@@ -72,21 +73,20 @@ impl VaultRegistry {
     }
 
     fn save_config(&self, config: &VaultsConfig) -> Result<()> {
-        let content =
-            toml::to_string_pretty(config).context("Failed to serialize vaults config")?;
+        let content = toml::to_string_pretty(config).context("Failed to serialize deck config")?;
 
         fs::write(self.registry_path(), content).context("Failed to write vaults.toml")?;
         Ok(())
     }
 
-    pub fn create_vault(&self, name: &str, path: PathBuf) -> Result<VaultMetadata> {
+    pub fn create_deck(&self, name: &str, path: PathBuf) -> Result<DeckMetadata> {
         let mut config = self.load_config()?;
 
         if config.vaults.iter().any(|v| v.name == name) {
-            anyhow::bail!("Vault '{}' already exists", name);
+            anyhow::bail!("Deck '{}' already exists", name);
         }
 
-        let metadata = VaultMetadata::new(name.to_string(), path);
+        let metadata = DeckMetadata::new(name.to_string(), path);
         config.vaults.push(metadata.clone());
 
         if config.active_vault.is_empty() {
@@ -97,14 +97,14 @@ impl VaultRegistry {
         Ok(metadata)
     }
 
-    pub fn delete_vault(&self, name: &str) -> Result<()> {
+    pub fn delete_deck(&self, name: &str) -> Result<()> {
         let mut config = self.load_config()?;
 
         let initial_len = config.vaults.len();
         config.vaults.retain(|v| v.name != name);
 
         if config.vaults.len() == initial_len {
-            anyhow::bail!("Vault '{}' not found", name);
+            anyhow::bail!("Deck '{}' not found", name);
         }
 
         if config.active_vault == name {
@@ -123,7 +123,7 @@ impl VaultRegistry {
         let mut config = self.load_config()?;
 
         if !config.vaults.iter().any(|v| v.name == name) {
-            anyhow::bail!("Vault '{}' not found", name);
+            anyhow::bail!("Deck '{}' not found", name);
         }
 
         config.active_vault = name.to_string();
@@ -131,59 +131,59 @@ impl VaultRegistry {
         Ok(())
     }
 
-    pub fn get_vault(&self, name: &str) -> Result<VaultMetadata> {
+    pub fn get_deck(&self, name: &str) -> Result<DeckMetadata> {
         let config = self.load_config()?;
 
         config
             .vaults
             .into_iter()
             .find(|v| v.name == name)
-            .ok_or_else(|| anyhow::anyhow!("Vault '{}' not found", name))
+            .ok_or_else(|| anyhow::anyhow!("Deck '{}' not found", name))
     }
 
-    pub fn get_active_vault(&self) -> Result<VaultMetadata> {
+    pub fn get_active_deck(&self) -> Result<DeckMetadata> {
         let config = self.load_config()?;
 
         if config.active_vault.is_empty() {
-            anyhow::bail!("No active vault set. Use 'hc vault use <name>' to set one.");
+            anyhow::bail!("No active deck set. Use 'hc hand use <name>' to set one.");
         }
 
-        self.get_vault(&config.active_vault)
+        self.get_deck(&config.active_vault)
     }
 
-    pub fn list_vaults(&self) -> Result<Vec<VaultMetadata>> {
+    pub fn list_decks(&self) -> Result<Vec<DeckMetadata>> {
         let config = self.load_config()?;
-        let mut vaults = config.vaults;
-        vaults.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
-        Ok(vaults)
+        let mut decks = config.vaults;
+        decks.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
+        Ok(decks)
     }
 
-    pub fn touch_vault(&self, name: &str) -> Result<()> {
+    pub fn touch_deck(&self, name: &str) -> Result<()> {
         let mut config = self.load_config()?;
 
-        if let Some(vault) = config.vaults.iter_mut().find(|v| v.name == name) {
-            vault.touch();
+        if let Some(deck) = config.vaults.iter_mut().find(|v| v.name == name) {
+            deck.touch();
             self.save_config(&config)?;
             Ok(())
         } else {
-            anyhow::bail!("Vault '{}' not found", name);
+            anyhow::bail!("Deck '{}' not found", name);
         }
     }
 
-    fn migrate_legacy_vault(&self) -> Result<()> {
-        let legacy_vault_path = self.config_dir.join("vault.enc");
+    fn migrate_legacy_deck(&self) -> Result<()> {
+        let legacy_deck_path = self.config_dir.join("vault.enc");
 
-        if legacy_vault_path.exists() {
-            println!("🔄 Migrating existing vault to 'default' vault...");
+        if legacy_deck_path.exists() {
+            println!("🔄 Migrating existing deck to 'default' deck...");
 
-            let metadata = VaultMetadata::new("default".to_string(), legacy_vault_path);
+            let metadata = DeckMetadata::new("default".to_string(), legacy_deck_path);
             let config = VaultsConfig {
                 active_vault: "default".to_string(),
                 vaults: vec![metadata],
             };
 
             self.save_config(&config)?;
-            println!("✓ Migration complete. Your vault is now named 'default'.");
+            println!("✓ Migration complete. Your deck is now named 'default'.");
         }
 
         Ok(())

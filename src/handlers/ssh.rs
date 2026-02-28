@@ -4,13 +4,13 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::cli::commands::SshCommands;
-use crate::domain::{find_entry_by_name_or_alias, validate_private_key, Entry};
+use crate::domain::{find_hand_by_name_or_alias, validate_private_key, Hand};
 use crate::infrastructure::{KeyringManager, SshAgent};
-use crate::multi_vault_context::MultiVaultContext;
+use crate::multi_deck_context::MultiDeckContext;
 
 pub fn handle_ssh(
     subcommand: SshCommands,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -35,17 +35,17 @@ pub fn handle_ssh(
                 public_key_path: public_key,
                 passphrase,
             },
-            vault_name,
+            deck_name,
             keyring,
             config_dir,
         ),
         SshCommands::Load { name, lifetime } => {
-            handle_ssh_load(&name, lifetime, vault_name, keyring, config_dir)
+            handle_ssh_load(&name, lifetime, deck_name, keyring, config_dir)
         }
-        SshCommands::Unload { name } => handle_ssh_unload(&name, vault_name, keyring, config_dir),
-        SshCommands::List => handle_ssh_list(vault_name, keyring, config_dir),
+        SshCommands::Unload { name } => handle_ssh_unload(&name, deck_name, keyring, config_dir),
+        SshCommands::List => handle_ssh_list(deck_name, keyring, config_dir),
         SshCommands::Connect { target, ssh_args } => {
-            handle_ssh_connect(&target, ssh_args, vault_name, keyring, config_dir)
+            handle_ssh_connect(&target, ssh_args, deck_name, keyring, config_dir)
         }
     }
 }
@@ -63,7 +63,7 @@ struct SshAddOptions {
 fn handle_ssh_add(
     name: &str,
     options: SshAddOptions,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -97,13 +97,13 @@ fn handle_ssh_add(
         );
     }
 
-    let mut ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
-    let mut custom_fields = HashMap::new();
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let mut cards = HashMap::new();
 
     if let Some(alias_value) = alias {
         // Pattern 1: Alias only (SSH config managed)
-        custom_fields.insert("alias".to_string(), alias_value);
-        println!("✓ SSH entry '{}' created with alias authentication", name);
+        cards.insert("alias".to_string(), alias_value);
+        println!("✓ SSH hand '{}' created with alias authentication", name);
     } else {
         // Pattern 2 & 3: Direct management (username + hostname required)
         let username_value =
@@ -111,20 +111,17 @@ fn handle_ssh_add(
         let hostname_value =
             hostname.context("Option --hostname is required when not using --alias")?;
 
-        custom_fields.insert("username".to_string(), username_value.clone());
-        custom_fields.insert("hostname".to_string(), hostname_value.clone());
-        custom_fields.insert(
+        cards.insert("username".to_string(), username_value.clone());
+        cards.insert("hostname".to_string(), hostname_value.clone());
+        cards.insert(
             "host".to_string(),
             format!("{}@{}", username_value, hostname_value),
         );
 
         if let Some(password_value) = password {
             // Pattern 2: Password authentication
-            custom_fields.insert("password".to_string(), password_value);
-            println!(
-                "✓ SSH entry '{}' created with password authentication",
-                name
-            );
+            cards.insert("password".to_string(), password_value);
+            println!("✓ SSH hand '{}' created with password authentication", name);
         } else if let Some(private_key_path_value) = private_key_path {
             // Pattern 3: Key authentication
             let expanded_private_key_path = expand_tilde(&private_key_path_value)?;
@@ -137,7 +134,7 @@ fn handle_ssh_add(
                 })?;
 
             validate_private_key(&private_key_content)?;
-            custom_fields.insert("private_key".to_string(), private_key_content);
+            cards.insert("private_key".to_string(), private_key_content);
 
             if let Some(public_key_path_value) = public_key_path {
                 let expanded_public_key_path = expand_tilde(&public_key_path_value)?;
@@ -148,24 +145,24 @@ fn handle_ssh_add(
                             expanded_public_key_path
                         )
                     })?;
-                custom_fields.insert("public_key".to_string(), public_key_content);
+                cards.insert("public_key".to_string(), public_key_content);
             }
 
             if let Some(passphrase_value) = passphrase {
-                custom_fields.insert("passphrase".to_string(), passphrase_value);
+                cards.insert("passphrase".to_string(), passphrase_value);
             }
 
-            println!("✓ SSH entry '{}' created with key authentication", name);
+            println!("✓ SSH hand '{}' created with key authentication", name);
         } else {
             anyhow::bail!("Either --password or --private-key is required when not using --alias");
         }
     }
 
-    let entry = Entry::new(name.to_string(), custom_fields, None);
-    ctx.inner.vault.add_entry(entry)?;
+    let hand = Hand::new(name.to_string(), cards, None);
+    ctx.inner.deck.add_hand(hand)?;
     ctx.save()?;
 
-    println!("✓ Entry '{}' saved to vault", name);
+    println!("✓ Hand '{}' saved to deck", name);
 
     Ok(())
 }
@@ -180,32 +177,32 @@ fn expand_tilde(path: &str) -> Result<String> {
 }
 
 fn handle_ssh_load(
-    entry_name: &str,
+    hand_name: &str,
     lifetime: Option<u32>,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
-    let entry = ctx
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let hand = ctx
         .inner
-        .vault
-        .get_entry(entry_name)
-        .map_err(|_| anyhow::anyhow!("Entry '{}' not found", entry_name))?;
+        .deck
+        .get_hand(hand_name)
+        .map_err(|_| anyhow::anyhow!("Hand '{}' not found", hand_name))?;
 
-    let private_key = entry
-        .custom_fields
+    let private_key = hand
+        .cards
         .get("private_key")
-        .context("Entry does not contain 'private_key' field")?;
+        .context("Hand does not contain 'private_key' card")?;
 
     validate_private_key(private_key)?;
 
-    let passphrase = entry.custom_fields.get("passphrase").map(|s| s.as_str());
+    let passphrase: Option<&str> = hand.cards.get("passphrase").map(|s| s.as_str());
 
     let agent = SshAgent::connect()?;
     agent.add_identity(private_key, passphrase, lifetime)?;
 
-    println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
+    println!("✓ SSH key '{}' loaded into ssh-agent", hand_name);
     match lifetime {
         Some(0) => println!("  Lifetime: forever"),
         Some(sec) => println!("  Lifetime: {} seconds", sec),
@@ -217,17 +214,16 @@ fn handle_ssh_load(
 
 fn handle_ssh_unload(
     identifier: &str,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let public_key = if let Ok(entry) = ctx.inner.vault.get_entry(identifier) {
-        entry
-            .custom_fields
+    let public_key = if let Ok(hand) = ctx.inner.deck.get_hand(identifier) {
+        hand.cards
             .get("public_key")
-            .context("Entry does not contain 'public_key' field")?
+            .context("Hand does not contain 'public_key' card")?
             .clone()
     } else {
         identifier.to_string()
@@ -241,23 +237,23 @@ fn handle_ssh_unload(
 }
 
 fn handle_ssh_list(
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
-    let entries = ctx.inner.vault.list_entries();
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+    let hands = ctx.inner.deck.list_hands();
 
-    let ssh_entries: Vec<_> = entries.iter().filter(|entry| is_ssh_entry(entry)).collect();
+    let ssh_hands: Vec<_> = hands.iter().filter(|hand| is_ssh_hand(hand)).collect();
 
-    if ssh_entries.is_empty() {
-        println!("No SSH entries found in vault");
+    if ssh_hands.is_empty() {
+        println!("No SSH hands found in deck");
     } else {
-        println!("\nSSH Entries:\n");
-        for entry in ssh_entries {
-            let auth_type = get_auth_type(entry);
-            let target = get_ssh_target(entry);
-            println!("  {} ({})", entry.name, auth_type);
+        println!("\nSSH Hands:\n");
+        for hand in ssh_hands {
+            let auth_type = get_auth_type(hand);
+            let target = get_ssh_target(hand);
+            println!("  {} ({})", hand.name(), auth_type);
             if let Some(t) = target {
                 println!("    → {}", t);
             }
@@ -267,81 +263,92 @@ fn handle_ssh_list(
     Ok(())
 }
 
-fn is_ssh_entry(entry: &Entry) -> bool {
-    entry.custom_fields.contains_key("alias")
-        || entry.custom_fields.contains_key("private_key")
-        || (entry.custom_fields.contains_key("username")
-            && entry.custom_fields.contains_key("hostname"))
+fn is_ssh_hand(hand: &Hand) -> bool {
+    hand.cards.contains_key("alias")
+        || hand.cards.contains_key("private_key")
+        || (hand.cards.contains_key("username") && hand.cards.contains_key("hostname"))
 }
 
-fn get_auth_type(entry: &Entry) -> &str {
-    if entry.custom_fields.contains_key("alias") {
+fn get_auth_type(hand: &Hand) -> &str {
+    if hand.cards.contains_key("alias") {
         "alias"
-    } else if entry.custom_fields.contains_key("private_key") {
+    } else if hand.cards.contains_key("private_key") {
         "key"
-    } else if entry.custom_fields.contains_key("password") {
+    } else if hand.cards.contains_key("password") {
         "password"
     } else {
         "unknown"
     }
 }
 
-fn get_ssh_target(entry: &Entry) -> Option<String> {
-    if let Some(alias) = entry.custom_fields.get("alias") {
+fn get_ssh_target(hand: &Hand) -> Option<String> {
+    if let Some(alias) = hand.cards.get("alias") {
         Some(format!("alias: {}", alias))
     } else {
-        entry.custom_fields.get("host").cloned()
+        hand.cards.get("host").cloned()
     }
 }
 
 fn handle_ssh_connect(
     target: &str,
     ssh_args: Vec<String>,
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
-    let ctx = MultiVaultContext::load(vault_name, keyring, config_dir)?;
+    let ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
 
-    let entry_name = find_entry_by_name_or_alias(&ctx.inner.vault, target)
-        .ok_or_else(|| anyhow::anyhow!("No entry found with name or alias '{}'", target))?;
+    let hand_name = find_hand_by_name_or_alias(&ctx.inner.deck, target)
+        .ok_or_else(|| anyhow::anyhow!("No hand found with name or alias '{}'", target))?;
 
-    let entry = ctx.inner.vault.get_entry(&entry_name)?;
+    let hand = ctx.inner.deck.get_hand(&hand_name)?;
 
     let ssh_target = if target.contains('@') {
         target.to_string()
     } else {
-        entry
-            .custom_fields
+        // Get CSV list from host or alias card
+        let csv_value = hand
+            .cards
             .get("host")
-            .or_else(|| entry.custom_fields.get("alias"))
-            .and_then(|value| value.split(',').next().map(|s| s.trim().to_string()))
-            .context("Entry has no 'host' or 'alias' field and target is not in user@host format")?
+            .or_else(|| hand.cards.get("alias"))
+            .context("Hand has no 'host' or 'alias' card and target is not in user@host format")?;
+
+        // Parse CSV and try to match the provided target exactly
+        let aliases: Vec<String> = csv_value.split(',').map(|s| s.trim().to_string()).collect();
+
+        // Try exact match first, otherwise use first entry
+        aliases
+            .iter()
+            .find(|alias| *alias == target)
+            .cloned()
+            .or_else(|| aliases.first().cloned())
+            .context("No valid alias found in CSV list")?
     };
 
-    let has_private_key = entry.custom_fields.contains_key("private_key");
-    let has_password = entry.custom_fields.contains_key("password");
+    let has_alias = hand.cards.contains_key("alias");
+    let has_private_key = hand.cards.contains_key("private_key");
+    let has_password = hand.cards.contains_key("password");
 
-    if !has_private_key && !has_password {
+    if !has_alias && !has_private_key && !has_password {
         anyhow::bail!(
-            "Entry '{}' must have either 'private_key' or 'password' field for SSH authentication",
-            entry_name
+            "Hand '{}' must have either 'alias', 'private_key', or 'password' card for SSH authentication",
+            hand_name
         );
     }
 
     println!("Connecting to {}...", ssh_target);
 
-    let status = if let Some(password) = entry.custom_fields.get("password") {
+    let status = if let Some(password) = hand.cards.get("password") {
         execute_ssh_with_password(&ssh_target, &ssh_args, password)?
-    } else if let Some(private_key) = entry.custom_fields.get("private_key") {
+    } else if let Some(private_key) = hand.cards.get("private_key") {
         validate_private_key(private_key)?;
 
-        let passphrase = entry.custom_fields.get("passphrase").map(|s| s.as_str());
+        let passphrase = hand.cards.get("passphrase").map(|s| s.as_str());
 
         let agent = SshAgent::connect()?;
         agent.add_identity(private_key, passphrase, None)?;
 
-        println!("✓ SSH key '{}' loaded into ssh-agent", entry_name);
+        println!("✓ SSH key '{}' loaded into ssh-agent", hand_name);
 
         Command::new("ssh")
             .arg(&ssh_target)
@@ -349,7 +356,12 @@ fn handle_ssh_connect(
             .status()
             .context("Failed to execute ssh command")?
     } else {
-        unreachable!("Either private_key or password should exist")
+        // Alias mode: use ssh_target directly (managed by ~/.ssh/config)
+        Command::new("ssh")
+            .arg(&ssh_target)
+            .args(&ssh_args)
+            .status()
+            .context("Failed to execute ssh command")?
     };
 
     if !status.success() {

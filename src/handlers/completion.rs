@@ -6,7 +6,7 @@ use std::path::Path;
 
 use crate::cli::commands::Cli;
 use crate::config::Config;
-use crate::infrastructure::{SessionManager, VaultRegistry};
+use crate::infrastructure::{DeckRegistry, SessionManager};
 
 pub fn handle_completion(shell: &str) -> Result<()> {
     let mut cmd = Cli::command();
@@ -57,47 +57,47 @@ pub fn handle_completion(shell: &str) -> Result<()> {
 fn print_bash_dynamic_completion() {
     println!(
         r#"
-# Dynamic entry name completion
-_hc_complete_entry_names() {{
+# Dynamic hand name completion
+_hc_complete_hand_names() {{
     local entries
-    entries=$(hc __complete-entries 2>/dev/null)
+    entries=$(hc __complete-hands 2>/dev/null)
     COMPREPLY+=($(compgen -W "$entries" -- "${{COMP_WORDS[COMP_CWORD]}}"))
 }}
 
-# Override completion for commands that take entry names
-_hc_entry_get() {{
+# Override completion for commands that take hand names
+_hc_hand_get() {{
     case "${{prev}}" in
         get|edit|remove|rm)
-            _hc_complete_entry_names
+            _hc_complete_hand_names
             return 0
             ;;
     esac
 }}
 
-complete -F _hc_entry_get hc
+complete -F _hc_hand_get hc
 "#
     );
 }
 
 fn patch_zsh_completion(completion: String) -> String {
     let helper_function = r#"
-# Dynamic entry name completion helper
-_hc_entry_names() {
+# Dynamic hand name completion helper
+_hc_hand_names() {
     local -a entries
-    entries=(${(f)"$(hc __complete-entries 2>/dev/null)"})
-    _describe 'entry names' entries
+    entries=(${(f)"$(hc __complete-hands 2>/dev/null)"})
+    _describe 'hand names' entries
 }
 
 "#;
 
     let completion = completion
         .replace(
-            "':name -- Entry name:_default'",
-            "':name -- Entry name: _hc_entry_names'",
+            "':name -- Hand name:_default'",
+            "':name -- Hand name: _hc_hand_names'",
         )
         .replace(
-            "':entry -- Entry name:_default'",
-            "':entry -- Entry name: _hc_entry_names'",
+            "':card -- Hand name:_default'",
+            "':card -- Hand name: _hc_hand_names'",
         );
 
     let completion = completion.replace(
@@ -111,33 +111,33 @@ _hc_entry_names() {
 fn print_fish_dynamic_completion() {
     println!(
         r#"
-# Dynamic entry name completion for fish
-function __hc_entry_names
-    hc __complete-entries 2>/dev/null
+# Dynamic hand name completion for fish
+function __hc_hand_names
+    hc __complete-hands 2>/dev/null
 end
 
-complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from get" -a "(__hc_entry_names)"
-complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from edit" -a "(__hc_entry_names)"
-complete -c hc -n "__fish_seen_subcommand_from entry; and __fish_seen_subcommand_from remove" -a "(__hc_entry_names)"
+complete -c hc -n "__fish_seen_subcommand_from hand; and __fish_seen_subcommand_from get" -a "(__hc_hand_names)"
+complete -c hc -n "__fish_seen_subcommand_from hand; and __fish_seen_subcommand_from edit" -a "(__hc_hand_names)"
+complete -c hc -n "__fish_seen_subcommand_from hand; and __fish_seen_subcommand_from remove" -a "(__hc_hand_names)"
 "#
     );
 }
 
-pub fn handle_complete_entries(vault_name: Option<&str>, config_dir: &Path) -> Result<()> {
-    let vault_name = match vault_name {
+pub fn handle_complete_hands(deck_name: Option<&str>, config_dir: &Path) -> Result<()> {
+    let deck_name = match deck_name {
         Some(name) => name.to_string(),
         None => {
-            let registry = VaultRegistry::load(config_dir)?;
-            registry.get_active_vault()?.name
+            let registry = DeckRegistry::load(config_dir)?;
+            registry.get_active_deck()?.name
         }
     };
 
     let config = Config::load(config_dir)?;
-    let session = SessionManager::new(config_dir, &vault_name, config.session_timeout_minutes);
+    let session = SessionManager::new(config_dir, &deck_name, config.session_timeout_minutes);
 
-    let entry_names = session.load_entry_names().unwrap_or_default();
+    let hand_names = session.load_card_names().unwrap_or_default();
 
-    for name in entry_names {
+    for name in hand_names {
         println!("{}", name);
     }
 

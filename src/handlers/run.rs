@@ -8,7 +8,7 @@ use crate::infrastructure::KeyringManager;
 pub fn handle_run(
     env_vars: Vec<(String, String)>,
     command: &[String],
-    vault_name: Option<&str>,
+    deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
 ) -> Result<()> {
@@ -21,7 +21,7 @@ pub fn handle_run(
 
     for (key, value) in env_vars {
         let resolved_value = if SecretResolver::has_uri_references(&value) {
-            SecretResolver::resolve_template(&value, vault_name, keyring, config_dir)?
+            SecretResolver::resolve_template(&value, deck_name, keyring, config_dir)?
         } else {
             value
         };
