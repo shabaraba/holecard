@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.0...holecard-cli-v0.4.1) (2026-02-28)
+
+
+### Documentation
+
+* add logo to README ([#67](https://github.com/shabaraba/holecard/issues/67)) ([2e64c42](https://github.com/shabaraba/holecard/commit/2e64c428d663ab6e23203b286a3aa87eacc165a0))
+
 ## [0.4.0](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.3.3...holecard-cli-v0.4.0) (2026-02-28)
 
 
