@@ -27,6 +27,7 @@ impl Hand {
         &self.name
     }
 
+    #[allow(dead_code)]
     pub(crate) fn set_name(&mut self, name: String) {
         self.name = name;
         self.updated_at = Utc::now();

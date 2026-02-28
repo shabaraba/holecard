@@ -47,6 +47,7 @@ impl Deck {
         hands
     }
 
+    #[allow(dead_code)]
     pub fn rename_hand(&mut self, old_name: &str, new_name: String) -> Result<(), DeckError> {
         if self.hands.contains_key(&new_name) {
             return Err(DeckError::HandAlreadyExists(new_name));
