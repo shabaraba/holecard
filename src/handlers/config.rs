@@ -10,7 +10,7 @@ pub fn handle_config(subcommand: Option<ConfigCommands>, config_dir: &Path) -> R
     match subcommand {
         None => {
             println!("\nCurrent Configuration:");
-            println!("  Vault Path: {}", config.vault_path.display());
+            println!("  Deck Path: {}", config.deck_path.display());
             println!(
                 "  Session Timeout: {} minutes",
                 config.session_timeout_minutes
@@ -25,7 +25,7 @@ pub fn handle_config(subcommand: Option<ConfigCommands>, config_dir: &Path) -> R
                 new_path
             };
 
-            config.vault_path = expanded_path.clone();
+            config.deck_path = expanded_path.clone();
             config.save(config_dir)?;
             println!("✓ Deck path updated to: {}", expanded_path.display());
         }

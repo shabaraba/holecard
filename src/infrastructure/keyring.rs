@@ -55,14 +55,14 @@ impl KeyringManager {
         Ok(())
     }
 
-    pub fn save_master_password(&self, vault_name: &str, master_password: &str) -> Result<()> {
+    pub fn save_master_password(&self, deck_name: &str, master_password: &str) -> Result<()> {
         #[cfg(target_os = "macos")]
         {
-            super::keychain_macos::save_master_password(vault_name, master_password)
+            super::keychain_macos::save_master_password(deck_name, master_password)
         }
         #[cfg(not(target_os = "macos"))]
         {
-            let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+            let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, deck_name);
             Entry::new(SERVICE_NAME, &username)
                 .map_err(|e| anyhow::anyhow!("Failed to access keyring: {}", e))?
                 .set_password(master_password)
@@ -70,14 +70,14 @@ impl KeyringManager {
         }
     }
 
-    pub fn load_master_password(&self, vault_name: &str) -> Result<Option<String>> {
+    pub fn load_master_password(&self, deck_name: &str) -> Result<Option<String>> {
         #[cfg(target_os = "macos")]
         {
-            super::keychain_macos::load_master_password(vault_name)
+            super::keychain_macos::load_master_password(deck_name)
         }
         #[cfg(not(target_os = "macos"))]
         {
-            let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+            let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, deck_name);
             match Entry::new(SERVICE_NAME, &username) {
                 Ok(entry) => match entry.get_password() {
                     Ok(pwd) => Ok(Some(pwd.trim().to_string())),
@@ -89,14 +89,14 @@ impl KeyringManager {
     }
 
     #[allow(dead_code)]
-    pub fn delete_master_password(&self, vault_name: &str) -> Result<()> {
+    pub fn delete_master_password(&self, deck_name: &str) -> Result<()> {
         #[cfg(target_os = "macos")]
         {
-            super::keychain_macos::delete_master_password(vault_name)
+            super::keychain_macos::delete_master_password(deck_name)
         }
         #[cfg(not(target_os = "macos"))]
         {
-            let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name);
+            let username = format!("{}-{}", MASTER_PASSWORD_PREFIX, deck_name);
             if let Ok(entry) = Entry::new(SERVICE_NAME, &username) {
                 let _ = entry.delete_password();
             }

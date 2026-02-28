@@ -7,7 +7,7 @@ use crate::infrastructure::KeyringManager;
 use crate::multi_deck_context::MultiDeckContext;
 
 pub fn handle_inject(
-    entry_name: &str,
+    card_name: &str,
     template: &str,
     deck_name: Option<&str>,
     keyring: &KeyringManager,
@@ -17,7 +17,7 @@ pub fn handle_inject(
     let hand = ctx
         .inner
         .deck
-        .get_hand(entry_name)
+        .get_hand(card_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let rendered = TemplateEngine::render(template, hand)?;
@@ -27,7 +27,7 @@ pub fn handle_inject(
 }
 
 pub fn handle_run(
-    entry_name: &str,
+    card_name: &str,
     command: &[String],
     deck_name: Option<&str>,
     keyring: &KeyringManager,
@@ -41,7 +41,7 @@ pub fn handle_run(
     let hand = ctx
         .inner
         .deck
-        .get_hand(entry_name)
+        .get_hand(card_name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let mut cmd = Command::new(&command[0]);

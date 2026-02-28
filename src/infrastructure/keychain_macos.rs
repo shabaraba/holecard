@@ -5,12 +5,12 @@ use super::swift_runner::run_swift;
 const SERVICE_NAME: &str = "hc";
 const MASTER_PASSWORD_PREFIX: &str = "master_password";
 
-fn account_name(vault_name: &str) -> String {
-    format!("{}-{}", MASTER_PASSWORD_PREFIX, vault_name)
+fn account_name(deck_name: &str) -> String {
+    format!("{}-{}", MASTER_PASSWORD_PREFIX, deck_name)
 }
 
-pub fn save_master_password(vault_name: &str, master_password: &str) -> Result<()> {
-    let account = account_name(vault_name);
+pub fn save_master_password(deck_name: &str, master_password: &str) -> Result<()> {
+    let account = account_name(deck_name);
     let escaped_password = master_password.replace('\\', "\\\\").replace('"', "\\\"");
 
     let script = format!(
@@ -53,8 +53,8 @@ if status == errSecSuccess {{
     Ok(())
 }
 
-pub fn load_master_password(vault_name: &str) -> Result<Option<String>> {
-    let account = account_name(vault_name);
+pub fn load_master_password(deck_name: &str) -> Result<Option<String>> {
+    let account = account_name(deck_name);
 
     let script = format!(
         r#"
@@ -92,8 +92,8 @@ if status == errSecSuccess, let data = item as? Data, let password = String(data
 }
 
 #[allow(dead_code)]
-pub fn delete_master_password(vault_name: &str) -> Result<()> {
-    let account = account_name(vault_name);
+pub fn delete_master_password(deck_name: &str) -> Result<()> {
+    let account = account_name(deck_name);
 
     let script = format!(
         r#"
