@@ -1,0 +1,94 @@
+#!/bin/bash
+# pre-push hook: フォーマット・Clippyチェックとcargo publish
+#
+# このhookは git push が実行される前に動作します。
+# 1. 全てのpush前にフォーマットとClippyチェックを実行
+# 2. タグ（v*.*.*形式）がpushされる場合、cargo publishを実行
+#
+# セットアップ:
+#   cp .githooks/pre-push .git/hooks/pre-push
+#   chmod +x .git/hooks/pre-push
+
+# フォーマットとClippyチェック
+echo "🔍 Running pre-push checks..."
+echo ""
+
+# cargo fmtでフォーマットチェック
+echo "→ Checking code format..."
+if ! cargo fmt --check 2>&1; then
+  echo "❌ Code formatting check failed"
+  echo "   Run 'cargo fmt' to fix formatting issues"
+  exit 1
+fi
+echo "✓ Code format check passed"
+echo ""
+
+# clippy with warnings as errors
+echo "→ Running clippy..."
+if ! cargo clippy -- -D warnings 2>&1; then
+  echo "❌ Clippy check failed"
+  echo "   Fix all warnings before pushing"
+  exit 1
+fi
+echo "✓ Clippy check passed"
+echo ""
+
+echo "✅ All pre-push checks passed"
+echo ""
+
+remote="$1"
+url="$2"
+
+# 標準入力から更新される参照情報を読み取る
+while read local_ref local_sha remote_ref remote_sha
+do
+  # タグがpushされるかチェック
+  if [[ $remote_ref =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+    tag_name="${remote_ref#refs/tags/}"
+
+    echo "================================================================"
+    echo "📦 Tag detected: $tag_name"
+    echo "================================================================"
+    echo ""
+
+    # Cargo.tomlのバージョンとタグが一致するか確認
+    cargo_version=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+    tag_version="${tag_name#v}"
+
+    echo "Cargo.toml version: $cargo_version"
+    echo "Tag version:        $tag_version"
+    echo ""
+
+    if [ "$cargo_version" != "$tag_version" ]; then
+      echo "❌ Error: Version mismatch!"
+      echo "   Please update Cargo.toml version to match the tag."
+      exit 1
+    fi
+
+    echo "✓ Version check passed"
+    echo ""
+    echo "Publishing to crates.io..."
+    echo "----------------------------------------------------------------"
+
+    # cargo publishを実行
+    if cargo publish; then
+      echo "----------------------------------------------------------------"
+      echo "✅ Successfully published $tag_name to crates.io!"
+      echo "================================================================"
+    else
+      echo "----------------------------------------------------------------"
+      echo "❌ Failed to publish to crates.io"
+      echo "================================================================"
+      echo ""
+      echo "The tag will still be pushed to GitHub."
+      echo "You can manually publish later with: cargo publish"
+      echo ""
+      # エラーでもpushは継続（exit 0）
+      # pushを中止したい場合は exit 1 にする
+    fi
+
+    echo ""
+  fi
+done
+
+exit 0

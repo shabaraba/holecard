@@ -270,8 +270,12 @@ hc export backup.json  # Encrypted with a password you choose
 ## 🏗️ Building from Source
 
 ```bash
-git clone https://github.com/shabarba/holecard
+git clone https://github.com/shabaraba/holecard
 cd holecard
+
+# Set up Git hooks (recommended for contributors)
+cp .githooks/pre-push .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
 
 # Build
 cargo build --release
@@ -285,6 +289,14 @@ cargo clippy
 # Format
 cargo fmt
 ```
+
+### Git Hooks
+
+The project includes a pre-push hook that automatically runs:
+- `cargo fmt --check` - Ensures code is properly formatted
+- `cargo clippy -- -D warnings` - Catches common mistakes and enforces best practices
+
+This prevents CI failures by catching issues before pushing to remote.
 
 ## 📋 Platform Support
 
