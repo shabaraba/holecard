@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.3.3...holecard-cli-v0.4.0) (2026-02-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename vault→deck, entry→hand, field→card ([#64](https://github.com/shabaraba/holecard/issues/64))
+
+### Features
+
+* add 1Password-compatible URI injection syntax ([#62](https://github.com/shabaraba/holecard/issues/62)) ([c30cffd](https://github.com/shabaraba/holecard/commit/c30cffd158ac7cb7972dc4c62ff930abab5c4fea))
+
+
+### Code Refactoring
+
+* rename vault→deck, entry→hand, field→card ([#64](https://github.com/shabaraba/holecard/issues/64)) ([daf06cf](https://github.com/shabaraba/holecard/commit/daf06cf99462d4e7ae8180fef71b162c60f0e056))
+
 ## [0.3.3](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.3.2...holecard-cli-v0.3.3) (2026-02-26)
 
 
