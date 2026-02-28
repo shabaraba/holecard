@@ -5,6 +5,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hand {
     name: String,
+    #[serde(alias = "custom_fields")]
     pub cards: HashMap<String, String>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,

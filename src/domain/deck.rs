@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Deck {
+    #[serde(alias = "entries")]
     hands: HashMap<String, Hand>,
 }
 
