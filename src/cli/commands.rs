@@ -63,7 +63,7 @@ pub enum Commands {
         #[arg(long, help = "Deck name (defaults to active deck)")]
         deck: Option<String>,
 
-        #[arg(long, help = "Keep card keys as-is (default: convert to uppercase)", action = clap::ArgAction::SetFalse)]
+        #[arg(long, help = "Keep card keys as-is (default: convert to uppercase)")]
         no_uppercase: bool,
 
         #[arg(long, help = "Add prefix to environment variables (e.g., HC_)")]

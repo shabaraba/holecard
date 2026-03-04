@@ -51,7 +51,7 @@ hc status                # Show session status
 hc config                # View/set configuration
 hc inject                # Inject secrets from URI-based template
 hc run                   # Run command with URI-based env vars
-hc deal <hand>           # Deal hand cards as env vars to command
+hc deal --hand <hand>    # Deal hand cards as env vars to command
 hc export <file>         # Export deck to JSON
 hc import <file>         # Import from JSON
 hc deck list             # List all decks
