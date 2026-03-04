@@ -51,6 +51,7 @@ hc status                # Show session status
 hc config                # View/set configuration
 hc inject                # Inject secrets from URI-based template
 hc run                   # Run command with URI-based env vars
+hc deal <hand>           # Deal hand cards as env vars to command
 hc export <file>         # Export deck to JSON
 hc import <file>         # Import from JSON
 hc deck list             # List all decks
@@ -82,6 +83,7 @@ src/
 │   ├── config.rs        # Configuration commands
 │   ├── inject.rs        # URI-based template injection
 │   ├── run.rs           # URI-based env var injection
+│   ├── deal.rs          # Deal hand cards as environment variables
 │   ├── read.rs          # URI-based secret reading
 │   ├── transfer.rs      # Import/export operations
 │   ├── totp.rs          # TOTP operations

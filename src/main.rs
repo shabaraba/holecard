@@ -108,6 +108,28 @@ fn main() -> Result<()> {
         Commands::Run { env, command } => {
             handlers::run::handle_run(env, &command, deck_name, &keyring, &config_dir)
         }
+        Commands::Deal {
+            hand,
+            deck,
+            no_uppercase,
+            prefix,
+            env,
+            command,
+        } => {
+            let options = handlers::deal::DealOptions {
+                uppercase: !no_uppercase,
+                prefix,
+                additional_env: env,
+            };
+            handlers::deal::handle_deal(
+                &hand,
+                options,
+                &command,
+                deck.as_deref().or(deck_name),
+                &keyring,
+                &config_dir,
+            )
+        }
         Commands::Lock => handlers::session::handle_lock(&config_dir),
         Commands::Status => handlers::session::handle_status(&config_dir),
         Commands::Export { file } => {

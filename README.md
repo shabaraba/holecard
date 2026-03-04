@@ -198,6 +198,38 @@ export DECK=production
 hc run --env DB_PASS=hc://${DECK}/db/password -- ./deploy.sh
 ```
 
+### Deal Hand as Environment Variables
+
+Export all cards from a hand as environment variables (keys are automatically converted to uppercase):
+
+```bash
+# Deal hand cards to command (api_key -> API_KEY, username -> USERNAME)
+hc deal --hand production -- node server.js
+
+# Specify deck explicitly
+hc deal --deck myapp --hand production -- node server.js
+
+# Keep original case with --no-uppercase
+hc deal --hand production --no-uppercase -- npm start
+
+# With prefix (api_key -> HC_API_KEY)
+hc deal --hand production --prefix HC_ -- python app.py
+
+# Mix with additional env vars (can override hand cards)
+hc deal --hand base --env NODE_ENV=production -- npm start
+```
+
+**Example hand:**
+```yaml
+# hand: production (in myapp deck)
+username: admin
+password: secret123
+api_key: sk-xxx
+database_url: postgresql://...
+```
+
+**Result:** Cards are exported as `USERNAME=admin`, `PASSWORD=secret123`, `API_KEY=sk-xxx`, `DATABASE_URL=postgresql://...`
+
 ### Import/Export
 
 ```bash

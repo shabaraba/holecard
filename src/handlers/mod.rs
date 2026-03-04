@@ -1,5 +1,6 @@
 pub mod completion;
 pub mod config;
+pub mod deal;
 pub mod deck;
 pub mod deck_management;
 pub mod inject;
