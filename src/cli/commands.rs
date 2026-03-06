@@ -55,6 +55,27 @@ pub enum Commands {
         command: Vec<String>,
     },
 
+    #[command(about = "Deal hand cards as environment variables to command")]
+    Deal {
+        #[arg(long, help = "Hand name to deal")]
+        hand: String,
+
+        #[arg(long, help = "Deck name (defaults to active deck)")]
+        deck: Option<String>,
+
+        #[arg(long, help = "Keep card keys as-is (default: convert to uppercase)")]
+        no_uppercase: bool,
+
+        #[arg(long, help = "Add prefix to environment variables (e.g., HC_)")]
+        prefix: Option<String>,
+
+        #[arg(long, value_parser = parse_env_var, help = "Additional environment variable (KEY=value)")]
+        env: Vec<(String, String)>,
+
+        #[arg(last = true, help = "Command and arguments to execute")]
+        command: Vec<String>,
+    },
+
     #[command(about = "Lock the deck (clear session)")]
     Lock,
 
