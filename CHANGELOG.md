@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.2...holecard-cli-v0.4.3) (2026-05-20)
+
+
+### Features
+
+* add Raycast extension for holecard ([#71](https://github.com/shabaraba/holecard/issues/71)) ([d3002ae](https://github.com/shabaraba/holecard/commit/d3002aead0f4363b5086cff24f491e6f5bbf6081))
+
 ## [0.4.2](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.1...holecard-cli-v0.4.2) (2026-03-06)
 
 
