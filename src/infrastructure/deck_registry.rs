@@ -154,7 +154,7 @@ impl DeckRegistry {
     pub fn list_decks(&self) -> Result<Vec<DeckMetadata>> {
         let config = self.load_config()?;
         let mut decks = config.vaults;
-        decks.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
+        decks.sort_by_key(|d| std::cmp::Reverse(d.last_accessed));
         Ok(decks)
     }
 
