@@ -197,6 +197,9 @@ pub enum HandCommands {
 
         #[arg(long, help = "Exclude symbols from generated password")]
         gen_no_symbols: bool,
+
+        #[arg(long, help = "Notes for this hand (skips interactive prompt)")]
+        note: Option<String>,
     },
 
     #[command(about = "Get a hand")]

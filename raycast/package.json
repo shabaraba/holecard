@@ -1,0 +1,49 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "holecard",
+  "title": "Holecard",
+  "description": "Secure password manager CLI integration",
+  "icon": "extension-icon.png",
+  "author": "shabaraba",
+  "categories": ["Productivity", "Security"],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "clip-card",
+      "title": "Clip Card",
+      "description": "Search hands and copy a card value to clipboard",
+      "mode": "view"
+    },
+    {
+      "name": "clip-totp",
+      "title": "Clip TOTP",
+      "description": "Search TOTP services and copy code to clipboard",
+      "mode": "view"
+    },
+    {
+      "name": "manage-hand",
+      "title": "Manage Hand",
+      "description": "Add, edit, and delete hands and cards",
+      "mode": "view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.84.3",
+    "@raycast/utils": "^1.17.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.3",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.4.5"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}

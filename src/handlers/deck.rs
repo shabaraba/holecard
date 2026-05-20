@@ -36,6 +36,7 @@ pub fn handle_add(
     gen_no_lowercase: bool,
     gen_no_digits: bool,
     gen_no_symbols: bool,
+    note: Option<String>,
     deck_name: Option<&str>,
     keyring: &KeyringManager,
     config_dir: &Path,
@@ -69,7 +70,16 @@ pub fn handle_add(
         println!("Generated password for 'password' field (hidden)");
     }
 
-    let notes = input::prompt_notes()?;
+    let notes = match note {
+        Some(n) => {
+            if n.is_empty() {
+                None
+            } else {
+                Some(n)
+            }
+        }
+        None => input::prompt_notes()?,
+    };
 
     let hand = Hand::new(card_name.clone(), custom_fields, notes);
     ctx.inner

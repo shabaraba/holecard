@@ -33,6 +33,7 @@ fn main() -> Result<()> {
                 gen_no_lowercase,
                 gen_no_digits,
                 gen_no_symbols,
+                note,
             } => handlers::deck::handle_add(
                 name,
                 field,
@@ -45,6 +46,7 @@ fn main() -> Result<()> {
                 gen_no_lowercase,
                 gen_no_digits,
                 gen_no_symbols,
+                note,
                 deck_name,
                 &keyring,
                 &config_dir,
