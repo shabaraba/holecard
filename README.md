@@ -17,6 +17,7 @@
 - **SSH key management** - Store and manage SSH keys with ssh-agent integration
 - **Biometric authentication** - Touch ID, Face ID, Apple Watch support on macOS
 - **Session caching** - Avoid repeated password prompts with configurable timeout
+- **Raycast extension** - Quick access to passwords and TOTP codes from Raycast
 
 ## Quick Start
 
@@ -259,6 +260,7 @@ hc config enable-biometric true
 - [Security Guide](docs/SECURITY.md) - Encryption details and security model
 - [SSH Key Management](docs/SSH.md) - Comprehensive SSH integration guide
 - [Multi-Deck Support](docs/MULTI_VAULT.md) - Managing multiple decks
+- [Raycast Extension](docs/RAYCAST.md) - Quick access via Raycast launcher
 - [Distribution Guide](DISTRIBUTION.md) - Release and distribution process
 
 ## Security
