@@ -13,7 +13,13 @@ pub fn save_master_password(deck_name: &str, master_password: &str) -> Result<()
 
     // Delete existing item first (old items may have app-specific ACL that causes prompts)
     let _ = Command::new("security")
-        .args(["delete-generic-password", "-s", SERVICE_NAME, "-a", &account])
+        .args([
+            "delete-generic-password",
+            "-s",
+            SERVICE_NAME,
+            "-a",
+            &account,
+        ])
         .output();
 
     // Add with -A (allow all applications) to prevent security prompts
@@ -64,7 +70,13 @@ pub fn load_master_password(deck_name: &str) -> Result<Option<String>> {
 pub fn delete_master_password(deck_name: &str) -> Result<()> {
     let account = account_name(deck_name);
     let _ = Command::new("security")
-        .args(["delete-generic-password", "-s", SERVICE_NAME, "-a", &account])
+        .args([
+            "delete-generic-password",
+            "-s",
+            SERVICE_NAME,
+            "-a",
+            &account,
+        ])
         .output();
     Ok(())
 }
