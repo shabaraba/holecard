@@ -4,7 +4,9 @@ use std::process::Command;
 
 pub struct SwiftOutput {
     pub success: bool,
+    #[allow(dead_code)]
     pub stdout: String,
+    #[allow(dead_code)]
     pub stderr: String,
 }
 
