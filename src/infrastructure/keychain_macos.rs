@@ -1,6 +1,5 @@
 use anyhow::Result;
-
-use super::swift_runner::run_swift;
+use std::process::Command;
 
 const SERVICE_NAME: &str = "hc";
 const MASTER_PASSWORD_PREFIX: &str = "master_password";
@@ -11,44 +10,35 @@ fn account_name(deck_name: &str) -> String {
 
 pub fn save_master_password(deck_name: &str, master_password: &str) -> Result<()> {
     let account = account_name(deck_name);
-    let escaped_password = master_password.replace('\\', "\\\\").replace('"', "\\\"");
 
-    let script = format!(
-        r#"
-import Foundation
-import Security
+    // Delete existing item first (old items may have app-specific ACL that causes prompts)
+    let _ = Command::new("security")
+        .args([
+            "delete-generic-password",
+            "-s",
+            SERVICE_NAME,
+            "-a",
+            &account,
+        ])
+        .output();
 
-let service = "{SERVICE_NAME}" as CFString
-let account = "{account}" as CFString
-let password = "{escaped_password}".data(using: .utf8)!
+    // Add with -A (allow all applications) to prevent security prompts
+    let status = Command::new("security")
+        .args([
+            "add-generic-password",
+            "-s",
+            SERVICE_NAME,
+            "-a",
+            &account,
+            "-w",
+            master_password,
+            "-A",
+        ])
+        .status()
+        .map_err(|e| anyhow::anyhow!("Failed to run security command: {}", e))?;
 
-var query: [String: Any] = [
-    kSecClass as String: kSecClassGenericPassword,
-    kSecAttrService as String: service,
-    kSecAttrAccount as String: account,
-    kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-    kSecValueData as String: password
-]
-
-SecItemDelete(query as CFDictionary)
-
-let status = SecItemAdd(query as CFDictionary, nil)
-if status == errSecSuccess {{
-    exit(0)
-}} else {{
-    print("error: \(status)")
-    exit(1)
-}}
-"#
-    );
-
-    let output = run_swift(&script)?;
-    if !output.success {
-        return Err(anyhow::anyhow!(
-            "Failed to save password to keychain.\nstdout: {}\nstderr: {}",
-            output.stdout,
-            output.stderr
-        ));
+    if !status.success() {
+        return Err(anyhow::anyhow!("Failed to save password to keychain"));
     }
     Ok(())
 }
@@ -56,36 +46,21 @@ if status == errSecSuccess {{
 pub fn load_master_password(deck_name: &str) -> Result<Option<String>> {
     let account = account_name(deck_name);
 
-    let script = format!(
-        r#"
-import Foundation
-import Security
+    let output = Command::new("security")
+        .args([
+            "find-generic-password",
+            "-s",
+            SERVICE_NAME,
+            "-a",
+            &account,
+            "-w",
+        ])
+        .output()
+        .map_err(|e| anyhow::anyhow!("Failed to run security command: {}", e))?;
 
-let service = "{SERVICE_NAME}" as CFString
-let account = "{account}" as CFString
-
-let query: [String: Any] = [
-    kSecClass as String: kSecClassGenericPassword,
-    kSecAttrService as String: service,
-    kSecAttrAccount as String: account,
-    kSecReturnData as String: true
-]
-
-var item: CFTypeRef?
-let status = SecItemCopyMatching(query as CFDictionary, &item)
-
-if status == errSecSuccess, let data = item as? Data, let password = String(data: data, encoding: .utf8) {{
-    print(password)
-    exit(0)
-}} else {{
-    exit(1)
-}}
-"#
-    );
-
-    let output = run_swift(&script)?;
-    if output.success {
-        Ok(Some(output.stdout))
+    if output.status.success() {
+        let password = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Ok(Some(password))
     } else {
         Ok(None)
     }
@@ -94,26 +69,14 @@ if status == errSecSuccess, let data = item as? Data, let password = String(data
 #[allow(dead_code)]
 pub fn delete_master_password(deck_name: &str) -> Result<()> {
     let account = account_name(deck_name);
-
-    let script = format!(
-        r#"
-import Foundation
-import Security
-
-let service = "{SERVICE_NAME}" as CFString
-let account = "{account}" as CFString
-
-let query: [String: Any] = [
-    kSecClass as String: kSecClassGenericPassword,
-    kSecAttrService as String: service,
-    kSecAttrAccount as String: account,
-]
-
-SecItemDelete(query as CFDictionary)
-exit(0)
-"#
-    );
-
-    run_swift(&script)?;
+    let _ = Command::new("security")
+        .args([
+            "delete-generic-password",
+            "-s",
+            SERVICE_NAME,
+            "-a",
+            &account,
+        ])
+        .output();
     Ok(())
 }
