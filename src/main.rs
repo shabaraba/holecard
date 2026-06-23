@@ -8,7 +8,7 @@ mod multi_deck_context;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::commands::{Cli, Commands, HandCommands};
+use cli::commands::{CardCommands, Cli, Commands, HandCommands};
 use config::get_config_dir;
 use infrastructure::KeyringManager;
 
@@ -90,6 +90,11 @@ fn main() -> Result<()> {
             HandCommands::Remove { name } => {
                 handlers::deck::handle_rm(&name, deck_name, &keyring, &config_dir)
             }
+            HandCommands::Card { subcommand } => match subcommand {
+                CardCommands::Rm { hand, card } => {
+                    handlers::deck::handle_card_rm(&hand, &card, deck_name, &keyring, &config_dir)
+                }
+            },
         },
         Commands::Config { subcommand } => handlers::config::handle_config(subcommand, &config_dir),
         Commands::Read { uri } => {

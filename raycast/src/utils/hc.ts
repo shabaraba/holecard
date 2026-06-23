@@ -103,6 +103,16 @@ export function removeCard(handName: string, key: string): void {
   run(`hand edit "${handName}" --rm-card "${key}"`);
 }
 
+export function renameCardKey(handName: string, oldKey: string, newKey: string): void {
+  const value = run(`read "hc://${handName}/${oldKey}"`).trim();
+  const result = spawnSync(HC, ["hand", "edit", handName, "-f", `${newKey}=${value}`, "--rm-card", oldKey], {
+    timeout: 10000,
+    encoding: "utf-8",
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr || "Failed to rename card key");
+}
+
 export function removeHand(handName: string): void {
   run(`hand remove "${handName}"`);
 }
