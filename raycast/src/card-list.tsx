@@ -76,6 +76,7 @@ export function CardList({ hand, onHandChange }: { hand: Hand; onHandChange: () 
           onRemoved={() => handleCardRemoved(card)}
           onRenamed={(newKey) => handleCardRenamed(card, newKey)}
           onCardAdded={handleCardAdded}
+          onEdited={onHandChange}
         />
       ))}
     </List>
@@ -88,12 +89,14 @@ function CardItem({
   onRemoved,
   onRenamed,
   onCardAdded,
+  onEdited,
 }: {
   handName: string;
   card: string;
   onRemoved: () => void;
   onRenamed: (newKey: string) => void;
   onCardAdded: (key: string) => void;
+  onEdited: () => void;
 }) {
   async function handleRemoveCard() {
     const confirmed = await confirmAlert({
@@ -140,7 +143,7 @@ function CardItem({
           <Action.Push
             title="Edit Value"
             icon={Icon.Pencil}
-            target={<UpsertCardForm handName={handName} existingKey={card} onComplete={() => {}} />}
+            target={<UpsertCardForm handName={handName} existingKey={card} onComplete={onEdited} />}
           />
           <Action.Push
             title="Rename Key"
