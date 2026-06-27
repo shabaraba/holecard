@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.4...holecard-cli-v0.4.5) (2026-06-27)
+
+
+### Features
+
+* add card key rename and dedicated card rm command ([#75](https://github.com/shabaraba/holecard/issues/75)) ([05a0686](https://github.com/shabaraba/holecard/commit/05a0686f3ce249e04720ba113b467c0cdd24e02f))
+
 ## [0.4.4](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.3...holecard-cli-v0.4.4) (2026-05-26)
 
 
