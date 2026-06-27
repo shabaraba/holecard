@@ -303,6 +303,34 @@ pub fn handle_edit_interactive(
     Ok(())
 }
 
+pub fn handle_card_rm(
+    hand_name: &str,
+    card_key: &str,
+    deck_name: Option<&str>,
+    keyring: &KeyringManager,
+    config_dir: &Path,
+) -> Result<()> {
+    let mut ctx = MultiDeckContext::load(deck_name, keyring, config_dir)?;
+
+    require_biometric_auth(&ctx.inner.config, "Remove card")?;
+
+    let hand = ctx
+        .inner
+        .deck
+        .get_hand_mut(hand_name)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    if hand.cards.remove(card_key).is_none() {
+        anyhow::bail!("Card '{}' not found in hand '{}'", card_key, hand_name);
+    }
+
+    hand.touch();
+    ctx.save()?;
+
+    println!("✓ Card '{}' removed from hand '{}'!", card_key, hand_name);
+    Ok(())
+}
+
 pub fn handle_rm(
     name: &str,
     deck_name: Option<&str>,

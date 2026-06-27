@@ -30,6 +30,13 @@ function run(args: string): string {
   return execSync(`${HC} ${args}`, { timeout: 10000 }).toString();
 }
 
+function spawn(args: string[]): string {
+  const result = spawnSync(HC, args, { timeout: 10000, encoding: "utf-8" });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error((result.stderr as string) || `hc ${args[0]} failed`);
+  return result.stdout as string;
+}
+
 function parseHandList(output: string): Hand[] {
   const hands: Hand[] = [];
   let current: Hand | null = null;
@@ -62,7 +69,7 @@ export function listTotpServices(): string[] {
 }
 
 export function copyCard(handName: string, cardName: string): void {
-  run(`hand get "${handName}" --clip "${cardName}"`);
+  spawn(["hand", "get", handName, "--clip", cardName]);
 }
 
 export interface TotpEntry {
@@ -85,22 +92,20 @@ export function addHand(name: string, cards: Record<string, string>, note = ""):
   const flags = Object.entries(cards)
     .filter(([k, v]) => k.trim() && v.trim())
     .flatMap(([k, v]) => ["-f", `${k}=${v}`]);
-
-  const result = spawnSync(HC, ["hand", "add", name, ...flags, "--note", note], {
-    timeout: 10000,
-    encoding: "utf-8",
-  });
-
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(result.stderr || "Failed to add hand");
+  spawn(["hand", "add", name, ...flags, "--note", note]);
 }
 
 export function upsertCard(handName: string, key: string, value: string): void {
-  run(`hand edit "${handName}" -f "${key}=${value}"`);
+  spawn(["hand", "edit", handName, "-f", `${key}=${value}`]);
 }
 
 export function removeCard(handName: string, key: string): void {
-  run(`hand edit "${handName}" --rm-card "${key}"`);
+  spawn(["hand", "edit", handName, "--rm-card", key]);
+}
+
+export function renameCardKey(handName: string, oldKey: string, newKey: string): void {
+  const value = spawn(["read", `hc://${handName}/${oldKey}`]).trim();
+  spawn(["hand", "edit", handName, "-f", `${newKey}=${value}`, "--rm-card", oldKey]);
 }
 
 export function removeHand(handName: string): void {

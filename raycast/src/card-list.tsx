@@ -1,7 +1,9 @@
 import { Action, ActionPanel, Alert, Form, Icon, List, Toast, confirmAlert, showToast, useNavigation } from "@raycast/api";
-import { Hand, copyCard, removeCard, removeHand, upsertCard } from "./utils/hc";
+import { useState } from "react";
+import { Hand, copyCard, removeCard, removeHand, renameCardKey, upsertCard } from "./utils/hc";
 
 export function CardList({ hand, onHandChange }: { hand: Hand; onHandChange: () => void }) {
+  const [cards, setCards] = useState<string[]>(hand.cards);
   const { pop } = useNavigation();
 
   async function handleRemoveHand() {
@@ -26,6 +28,21 @@ export function CardList({ hand, onHandChange }: { hand: Hand; onHandChange: () 
     }
   }
 
+  function handleCardRemoved(key: string) {
+    setCards((prev) => prev.filter((c) => c !== key));
+    onHandChange();
+  }
+
+  function handleCardAdded(key: string) {
+    setCards((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    onHandChange();
+  }
+
+  function handleCardRenamed(oldKey: string, newKey: string) {
+    setCards((prev) => prev.map((c) => (c === oldKey ? newKey : c)));
+    onHandChange();
+  }
+
   return (
     <List
       navigationTitle={hand.name}
@@ -35,7 +52,12 @@ export function CardList({ hand, onHandChange }: { hand: Hand; onHandChange: () 
           <Action.Push
             title="Add Card"
             icon={Icon.Plus}
-            target={<UpsertCardForm handName={hand.name} onComplete={onHandChange} />}
+            target={
+              <UpsertCardForm
+                handName={hand.name}
+                onComplete={(key) => handleCardAdded(key)}
+              />
+            }
           />
           <Action
             title="Delete Hand"
@@ -46,8 +68,16 @@ export function CardList({ hand, onHandChange }: { hand: Hand; onHandChange: () 
         </ActionPanel>
       }
     >
-      {hand.cards.map((card) => (
-        <CardItem key={card} handName={hand.name} card={card} onHandChange={onHandChange} />
+      {cards.map((card) => (
+        <CardItem
+          key={card}
+          handName={hand.name}
+          card={card}
+          onRemoved={() => handleCardRemoved(card)}
+          onRenamed={(newKey) => handleCardRenamed(card, newKey)}
+          onCardAdded={handleCardAdded}
+          onEdited={onHandChange}
+        />
       ))}
     </List>
   );
@@ -56,11 +86,17 @@ export function CardList({ hand, onHandChange }: { hand: Hand; onHandChange: () 
 function CardItem({
   handName,
   card,
-  onHandChange,
+  onRemoved,
+  onRenamed,
+  onCardAdded,
+  onEdited,
 }: {
   handName: string;
   card: string;
-  onHandChange: () => void;
+  onRemoved: () => void;
+  onRenamed: (newKey: string) => void;
+  onCardAdded: (key: string) => void;
+  onEdited: () => void;
 }) {
   async function handleRemoveCard() {
     const confirmed = await confirmAlert({
@@ -74,7 +110,7 @@ function CardItem({
       removeCard(handName, card);
       toast.style = Toast.Style.Success;
       toast.title = `Card '${card}' removed`;
-      onHandChange();
+      onRemoved();
     } catch (e) {
       toast.style = Toast.Style.Failure;
       toast.title = "Failed to remove card";
@@ -107,17 +143,24 @@ function CardItem({
           <Action.Push
             title="Edit Value"
             icon={Icon.Pencil}
-            target={<UpsertCardForm handName={handName} existingKey={card} onComplete={onHandChange} />}
+            target={<UpsertCardForm handName={handName} existingKey={card} onComplete={onEdited} />}
+          />
+          <Action.Push
+            title="Rename Key"
+            icon={Icon.TextCursor}
+            target={<RenameCardKeyForm handName={handName} existingKey={card} onComplete={onRenamed} />}
           />
           <Action.Push
             title="Add Card"
             icon={Icon.Plus}
-            target={<UpsertCardForm handName={handName} onComplete={onHandChange} />}
+            shortcut={{ modifiers: ["cmd"], key: "n" }}
+            target={<UpsertCardForm handName={handName} onComplete={onCardAdded} />}
           />
           <Action
             title="Remove Card"
             icon={Icon.Trash}
             style={Action.Style.Destructive}
+            shortcut={{ modifiers: ["ctrl"], key: "x" }}
             onAction={handleRemoveCard}
           />
         </ActionPanel>
@@ -133,7 +176,7 @@ function UpsertCardForm({
 }: {
   handName: string;
   existingKey?: string;
-  onComplete: () => void;
+  onComplete: (key: string) => void;
 }) {
   const { pop } = useNavigation();
   const isEdit = !!existingKey;
@@ -154,7 +197,7 @@ function UpsertCardForm({
       upsertCard(handName, key, values.value);
       toast.style = Toast.Style.Success;
       toast.title = isEdit ? `Card '${key}' updated` : `Card '${key}' added`;
-      onComplete();
+      onComplete(key);
       pop();
     } catch (e) {
       toast.style = Toast.Style.Failure;
@@ -174,6 +217,56 @@ function UpsertCardForm({
     >
       {!isEdit && <Form.TextField id="key" title="Key" placeholder="username" />}
       <Form.PasswordField id="value" title="Value" placeholder={isEdit ? "New value" : "Value"} />
+    </Form>
+  );
+}
+
+function RenameCardKeyForm({
+  handName,
+  existingKey,
+  onComplete,
+}: {
+  handName: string;
+  existingKey: string;
+  onComplete: (newKey: string) => void;
+}) {
+  const { pop } = useNavigation();
+
+  async function handleSubmit(values: { newKey: string }) {
+    const newKey = values.newKey.trim();
+    if (!newKey) {
+      await showToast({ style: Toast.Style.Failure, title: "New key name is required" });
+      return;
+    }
+    if (newKey === existingKey) {
+      await showToast({ style: Toast.Style.Failure, title: "New key is the same as current" });
+      return;
+    }
+
+    const toast = await showToast({ style: Toast.Style.Animated, title: "Renaming..." });
+    try {
+      renameCardKey(handName, existingKey, newKey);
+      toast.style = Toast.Style.Success;
+      toast.title = `Card renamed '${existingKey}' → '${newKey}'`;
+      onComplete(newKey);
+      pop();
+    } catch (e) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "Failed to rename card";
+      toast.message = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  return (
+    <Form
+      navigationTitle={`Rename '${existingKey}'`}
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm title="Rename" onSubmit={handleSubmit} />
+        </ActionPanel>
+      }
+    >
+      <Form.TextField id="newKey" title="New Key Name" defaultValue={existingKey} />
     </Form>
   );
 }

@@ -248,6 +248,24 @@ pub enum HandCommands {
         #[arg(help = "Hand name")]
         name: String,
     },
+
+    #[command(about = "Manage cards within a hand")]
+    Card {
+        #[command(subcommand)]
+        subcommand: CardCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum CardCommands {
+    #[command(about = "Remove a card from a hand")]
+    Rm {
+        #[arg(help = "Hand name")]
+        hand: String,
+
+        #[arg(help = "Card key to remove")]
+        card: String,
+    },
 }
 
 #[derive(Subcommand)]
