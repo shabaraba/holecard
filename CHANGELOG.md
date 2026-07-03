@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.5...holecard-cli-v0.4.6) (2026-07-03)
+
+
+### Bug Fixes
+
+* skip --note flag when note is empty in Raycast addHand ([cd398ef](https://github.com/shabaraba/holecard/commit/cd398ef87fd6f17a7cf145a6804cd74b1c245ba9))
+* skip --note flag when note is empty in Raycast addHand ([2fb8f8b](https://github.com/shabaraba/holecard/commit/2fb8f8b902a81252fb779021090410382aaf6897))
+
 ## [0.4.5](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.4...holecard-cli-v0.4.5) (2026-06-27)
 
 
