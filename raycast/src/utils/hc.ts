@@ -92,7 +92,8 @@ export function addHand(name: string, cards: Record<string, string>, note = ""):
   const flags = Object.entries(cards)
     .filter(([k, v]) => k.trim() && v.trim())
     .flatMap(([k, v]) => ["-f", `${k}=${v}`]);
-  spawn(["hand", "add", name, ...flags, "--note", note]);
+  const noteFlags = note.trim() ? ["--note", note] : [];
+  spawn(["hand", "add", name, ...flags, ...noteFlags]);
 }
 
 export function upsertCard(handName: string, key: string, value: string): void {
