@@ -90,6 +90,13 @@ pub fn require_biometric_auth(config: &Config, reason: &str) -> Result<()> {
         return Ok(());
     }
 
+    // Skip biometric in non-interactive contexts (e.g. Raycast, scripts).
+    // Session cache already provides authentication there.
+    use std::io::IsTerminal;
+    if !std::io::stdin().is_terminal() {
+        return Ok(());
+    }
+
     let biometric = get_biometric_auth();
     if !biometric.is_available() {
         return Ok(());
