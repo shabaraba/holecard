@@ -135,7 +135,7 @@ pub fn handle_complete_hands(deck_name: Option<&str>, config_dir: &Path) -> Resu
     let config = Config::load(config_dir)?;
     let session = SessionManager::new(config_dir, &deck_name, config.session_timeout_minutes);
 
-    let hand_names = session.load_card_names().unwrap_or_default();
+    let hand_names = session.load_hand_names().unwrap_or_default();
 
     for name in hand_names {
         println!("{}", name);

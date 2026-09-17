@@ -90,10 +90,10 @@ pub fn require_biometric_auth(config: &Config, reason: &str) -> Result<()> {
         return Ok(());
     }
 
-    // Skip biometric in non-interactive contexts (e.g. Raycast, scripts).
-    // Session cache already provides authentication there.
-    use std::io::IsTerminal;
-    if !std::io::stdin().is_terminal() {
+    // Skip biometric when invoked from the Raycast extension: its child
+    // process has no TTY to show a system auth dialog against, and the
+    // session cache already provides authentication there.
+    if std::env::var_os("HC_RAYCAST").is_some() {
         return Ok(());
     }
 

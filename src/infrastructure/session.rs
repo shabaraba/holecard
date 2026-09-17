@@ -11,8 +11,8 @@ struct SessionMetadata {
     last_accessed: u64,
     salt: String,
     derived_key: Option<String>,
-    #[serde(default, alias = "entry_names")]
-    card_names: Vec<String>,
+    #[serde(default, alias = "entry_names", alias = "card_names")]
+    hand_names: Vec<String>,
 }
 
 pub struct SessionData {
@@ -42,24 +42,18 @@ impl SessionManager {
         &self,
         derived_key: &[u8; 32],
         salt: &[u8; 16],
-        card_names: Vec<String>,
+        hand_names: Vec<String>,
     ) -> Result<()> {
-        let encoded_key = BASE64.encode(derived_key);
-        let encoded_salt = BASE64.encode(salt);
         let now = current_timestamp();
-
         let metadata = SessionMetadata {
             created_at: now,
             last_accessed: now,
-            salt: encoded_salt,
-            derived_key: Some(encoded_key),
-            card_names,
+            salt: BASE64.encode(salt),
+            derived_key: Some(BASE64.encode(derived_key)),
+            hand_names,
         };
-        let json = serde_json::to_string(&metadata)?;
-        fs::write(&self.session_file, &json)?;
-        set_private_permissions(&self.session_file)?;
 
-        Ok(())
+        self.write_metadata(&metadata)
     }
 
     pub fn load_session(&self) -> Result<Option<SessionData>> {
@@ -67,23 +61,30 @@ impl SessionManager {
             return Ok(None);
         }
 
-        let content = fs::read_to_string(&self.session_file)?;
-        let metadata: SessionMetadata = serde_json::from_str(&content)?;
+        let mut metadata: SessionMetadata = {
+            let content = fs::read_to_string(&self.session_file)?;
+            serde_json::from_str(&content)?
+        };
 
         let now = current_timestamp();
-        let elapsed_minutes = (now - metadata.last_accessed) / 60;
+        let elapsed_minutes = now.saturating_sub(metadata.last_accessed) / 60;
 
         if elapsed_minutes >= self.timeout_minutes {
             self.clear_session()?;
             return Ok(None);
         }
 
+        let mut migrated_from_legacy = false;
         let encoded_key = match &metadata.derived_key {
             Some(k) => k.clone(),
             None => {
                 // Migrate from legacy keychain storage
                 match self.load_from_legacy_keychain() {
-                    Some(k) => k,
+                    Some(k) => {
+                        metadata.derived_key = Some(k.clone());
+                        migrated_from_legacy = true;
+                        k
+                    }
                     None => return Ok(None),
                 }
             }
@@ -108,12 +109,17 @@ impl SessionManager {
         let mut salt = [0u8; 16];
         salt.copy_from_slice(&salt_bytes);
 
-        self.touch_session()?;
+        metadata.last_accessed = now;
+        self.write_metadata(&metadata)?;
+
+        if migrated_from_legacy {
+            self.delete_legacy_keychain_entry();
+        }
 
         Ok(Some(SessionData {
             derived_key,
             salt,
-            hand_names: metadata.card_names,
+            hand_names: metadata.hand_names,
         }))
     }
 
@@ -131,7 +137,7 @@ impl SessionManager {
         self.load_session().ok().flatten().is_some()
     }
 
-    pub fn load_card_names(&self) -> Result<Vec<String>> {
+    pub fn load_hand_names(&self) -> Result<Vec<String>> {
         if !self.session_file.exists() {
             return Ok(Vec::new());
         }
@@ -139,22 +145,12 @@ impl SessionManager {
         let content = fs::read_to_string(&self.session_file)?;
         let metadata: SessionMetadata = serde_json::from_str(&content)?;
 
-        Ok(metadata.card_names)
+        Ok(metadata.hand_names)
     }
 
-    fn touch_session(&self) -> Result<()> {
-        if !self.session_file.exists() {
-            return Ok(());
-        }
-
-        let content = fs::read_to_string(&self.session_file)?;
-        let mut metadata: SessionMetadata = serde_json::from_str(&content)?;
-        metadata.last_accessed = current_timestamp();
-
-        let json = serde_json::to_string(&metadata)?;
-        fs::write(&self.session_file, json)?;
-
-        Ok(())
+    fn write_metadata(&self, metadata: &SessionMetadata) -> Result<()> {
+        let json = serde_json::to_string(metadata)?;
+        write_private_file(&self.session_file, &json)
     }
 
     fn load_from_legacy_keychain(&self) -> Option<String> {
@@ -174,16 +170,37 @@ impl SessionManager {
 }
 
 #[cfg(unix)]
+fn write_private_file(path: &Path, contents: &str) -> Result<()> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+
+    // Create with 0600 up front so the derived key is never briefly
+    // readable under the process umask; re-assert it afterwards in case
+    // the file already existed with looser permissions.
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .context("Failed to create session file")?;
+    file.write_all(contents.as_bytes())
+        .context("Failed to write session file")?;
+
+    set_private_permissions(path)
+}
+
+#[cfg(not(unix))]
+fn write_private_file(path: &Path, contents: &str) -> Result<()> {
+    fs::write(path, contents).context("Failed to write session file")
+}
+
+#[cfg(unix)]
 fn set_private_permissions(path: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     let mut perms = fs::metadata(path)?.permissions();
     perms.set_mode(0o600);
     fs::set_permissions(path, perms).context("Failed to set session file permissions")
-}
-
-#[cfg(not(unix))]
-fn set_private_permissions(_path: &Path) -> Result<()> {
-    Ok(())
 }
 
 fn current_timestamp() -> u64 {
