@@ -90,6 +90,13 @@ pub fn require_biometric_auth(config: &Config, reason: &str) -> Result<()> {
         return Ok(());
     }
 
+    // Skip biometric when invoked from the Raycast extension: its child
+    // process has no TTY to show a system auth dialog against, and the
+    // session cache already provides authentication there.
+    if std::env::var_os("HC_RAYCAST").is_some() {
+        return Ok(());
+    }
+
     let biometric = get_biometric_auth();
     if !biometric.is_available() {
         return Ok(());

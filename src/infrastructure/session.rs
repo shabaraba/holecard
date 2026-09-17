@@ -1,21 +1,18 @@
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use keyring::Entry;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-
-const SERVICE_NAME_PREFIX: &str = "hc-session";
-const DERIVED_KEY_USER: &str = "derived_key";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionMetadata {
     created_at: u64,
     last_accessed: u64,
     salt: String,
-    #[serde(default, alias = "entry_names")]
-    card_names: Vec<String>,
+    derived_key: Option<String>,
+    #[serde(default, alias = "entry_names", alias = "card_names")]
+    hand_names: Vec<String>,
 }
 
 pub struct SessionData {
@@ -26,17 +23,18 @@ pub struct SessionData {
 }
 
 pub struct SessionManager {
-    service_name: String,
     session_file: PathBuf,
     timeout_minutes: u64,
+    // Legacy: service name used when migrating from keychain-based storage
+    legacy_service_name: String,
 }
 
 impl SessionManager {
     pub fn new(config_dir: &Path, deck_name: &str, timeout_minutes: u64) -> Self {
         Self {
-            service_name: format!("{}-{}", SERVICE_NAME_PREFIX, deck_name),
             session_file: config_dir.join(format!("session_{}.json", deck_name)),
             timeout_minutes,
+            legacy_service_name: format!("hc-session-{}", deck_name),
         }
     }
 
@@ -44,33 +42,18 @@ impl SessionManager {
         &self,
         derived_key: &[u8; 32],
         salt: &[u8; 16],
-        card_names: Vec<String>,
+        hand_names: Vec<String>,
     ) -> Result<()> {
-        let encoded_key = BASE64.encode(derived_key);
-        let encoded_salt = BASE64.encode(salt);
         let now = current_timestamp();
-
-        match Entry::new(&self.service_name, DERIVED_KEY_USER) {
-            Ok(entry) => {
-                entry
-                    .set_password(&encoded_key)
-                    .context("Failed to save session key to keyring")?;
-            }
-            Err(_) => {
-                return Err(anyhow::anyhow!("Keyring not available for session caching"));
-            }
-        }
-
         let metadata = SessionMetadata {
             created_at: now,
             last_accessed: now,
-            salt: encoded_salt,
-            card_names,
+            salt: BASE64.encode(salt),
+            derived_key: Some(BASE64.encode(derived_key)),
+            hand_names,
         };
-        let json = serde_json::to_string(&metadata)?;
-        fs::write(&self.session_file, json)?;
 
-        Ok(())
+        self.write_metadata(&metadata)
     }
 
     pub fn load_session(&self) -> Result<Option<SessionData>> {
@@ -78,25 +61,33 @@ impl SessionManager {
             return Ok(None);
         }
 
-        let metadata: SessionMetadata = {
+        let mut metadata: SessionMetadata = {
             let content = fs::read_to_string(&self.session_file)?;
             serde_json::from_str(&content)?
         };
 
         let now = current_timestamp();
-        let elapsed_minutes = (now - metadata.last_accessed) / 60;
+        let elapsed_minutes = now.saturating_sub(metadata.last_accessed) / 60;
 
         if elapsed_minutes >= self.timeout_minutes {
             self.clear_session()?;
             return Ok(None);
         }
 
-        let encoded_key = match Entry::new(&self.service_name, DERIVED_KEY_USER) {
-            Ok(entry) => match entry.get_password() {
-                Ok(key) => key,
-                Err(_) => return Ok(None),
-            },
-            Err(_) => return Ok(None),
+        let mut migrated_from_legacy = false;
+        let encoded_key = match &metadata.derived_key {
+            Some(k) => k.clone(),
+            None => {
+                // Migrate from legacy keychain storage
+                match self.load_from_legacy_keychain() {
+                    Some(k) => {
+                        metadata.derived_key = Some(k.clone());
+                        migrated_from_legacy = true;
+                        k
+                    }
+                    None => return Ok(None),
+                }
+            }
         };
 
         let key_bytes = BASE64
@@ -118,19 +109,22 @@ impl SessionManager {
         let mut salt = [0u8; 16];
         salt.copy_from_slice(&salt_bytes);
 
-        self.touch_session()?;
+        metadata.last_accessed = now;
+        self.write_metadata(&metadata)?;
+
+        if migrated_from_legacy {
+            self.delete_legacy_keychain_entry();
+        }
 
         Ok(Some(SessionData {
             derived_key,
             salt,
-            hand_names: metadata.card_names,
+            hand_names: metadata.hand_names,
         }))
     }
 
     pub fn clear_session(&self) -> Result<()> {
-        if let Ok(entry) = Entry::new(&self.service_name, DERIVED_KEY_USER) {
-            let _ = entry.delete_password();
-        }
+        self.delete_legacy_keychain_entry();
 
         if self.session_file.exists() {
             fs::remove_file(&self.session_file)?;
@@ -143,7 +137,7 @@ impl SessionManager {
         self.load_session().ok().flatten().is_some()
     }
 
-    pub fn load_card_names(&self) -> Result<Vec<String>> {
+    pub fn load_hand_names(&self) -> Result<Vec<String>> {
         if !self.session_file.exists() {
             return Ok(Vec::new());
         }
@@ -151,23 +145,62 @@ impl SessionManager {
         let content = fs::read_to_string(&self.session_file)?;
         let metadata: SessionMetadata = serde_json::from_str(&content)?;
 
-        Ok(metadata.card_names)
+        Ok(metadata.hand_names)
     }
 
-    fn touch_session(&self) -> Result<()> {
-        if !self.session_file.exists() {
-            return Ok(());
+    fn write_metadata(&self, metadata: &SessionMetadata) -> Result<()> {
+        let json = serde_json::to_string(metadata)?;
+        write_private_file(&self.session_file, &json)
+    }
+
+    fn load_from_legacy_keychain(&self) -> Option<String> {
+        use keyring::Entry;
+        Entry::new(&self.legacy_service_name, "derived_key")
+            .ok()?
+            .get_password()
+            .ok()
+    }
+
+    fn delete_legacy_keychain_entry(&self) {
+        use keyring::Entry;
+        if let Ok(entry) = Entry::new(&self.legacy_service_name, "derived_key") {
+            let _ = entry.delete_password();
         }
-
-        let content = fs::read_to_string(&self.session_file)?;
-        let mut metadata: SessionMetadata = serde_json::from_str(&content)?;
-        metadata.last_accessed = current_timestamp();
-
-        let json = serde_json::to_string(&metadata)?;
-        fs::write(&self.session_file, json)?;
-
-        Ok(())
     }
+}
+
+#[cfg(unix)]
+fn write_private_file(path: &Path, contents: &str) -> Result<()> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+
+    // Create with 0600 up front so the derived key is never briefly
+    // readable under the process umask; re-assert it afterwards in case
+    // the file already existed with looser permissions.
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .context("Failed to create session file")?;
+    file.write_all(contents.as_bytes())
+        .context("Failed to write session file")?;
+
+    set_private_permissions(path)
+}
+
+#[cfg(not(unix))]
+fn write_private_file(path: &Path, contents: &str) -> Result<()> {
+    fs::write(path, contents).context("Failed to write session file")
+}
+
+#[cfg(unix)]
+fn set_private_permissions(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(path)?.permissions();
+    perms.set_mode(0o600);
+    fs::set_permissions(path, perms).context("Failed to set session file permissions")
 }
 
 fn current_timestamp() -> u64 {

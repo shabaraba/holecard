@@ -26,12 +26,14 @@ export interface TotpResult {
   remainingSeconds: number;
 }
 
+const HC_ENV = { ...process.env, HC_RAYCAST: "1" };
+
 function run(args: string): string {
-  return execSync(`${HC} ${args}`, { timeout: 10000 }).toString();
+  return execSync(`${HC} ${args}`, { timeout: 10000, env: HC_ENV }).toString();
 }
 
 function spawn(args: string[]): string {
-  const result = spawnSync(HC, args, { timeout: 10000, encoding: "utf-8" });
+  const result = spawnSync(HC, args, { timeout: 10000, encoding: "utf-8", env: HC_ENV });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error((result.stderr as string) || `hc ${args[0]} failed`);
   return result.stdout as string;
