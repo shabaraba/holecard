@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.6...holecard-cli-v0.4.7) (2026-09-17)
+
+
+### Bug Fixes
+
+* address CodeRabbit review findings on session and biometric handling ([8971ccd](https://github.com/shabaraba/holecard/commit/8971ccdcdc1a56affa33be5e83a54558b138a3d1))
+* eliminate repeated auth prompts in Raycast extension ([0294a31](https://github.com/shabaraba/holecard/commit/0294a31f434aa0222479000b41ad7c0edfee7ecc))
+* eliminate repeated auth prompts when using Raycast extension ([8bc6f82](https://github.com/shabaraba/holecard/commit/8bc6f827910b333f55e970e59ce6f63b9556569d))
+
 ## [0.4.6](https://github.com/shabaraba/holecard/compare/holecard-cli-v0.4.5...holecard-cli-v0.4.6) (2026-07-03)
 
 
